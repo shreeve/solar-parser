@@ -1281,7 +1281,7 @@ export default {
 
 // Check if running as CLI (handles symlinks from global install)
 const scriptPath = fileURLToPath(import.meta.url);
-const isRunAsScript = process.argv[1] === scriptPath || 
+const isRunAsScript = process.argv[1] === scriptPath ||
                       fs.realpathSync(process.argv[1]) === scriptPath ||
                       fs.realpathSync(process.argv[1]) === fs.realpathSync(scriptPath);
 
