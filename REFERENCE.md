@@ -1,9 +1,14 @@
-# Solar Parser & S-Expression Mode
+# Solar - Technical Reference
 
-**Solar** is a complete SLR(1) parser generator **included with Rip** - written in Rip, compiled by Rip, zero external dependencies!
+**Solar** is a fast, standalone SLR(1) parser generator that generates parsers ~215× faster than Jison.
 
-**Location:** `src/grammar/solar.rip` (1,047 lines)
-**Dependencies:** ZERO - Self-hosting, standalone
+**Key Features:**
+- Zero dependencies
+- S-expression mode (optional)
+- Jison-compatible mode
+- Works with JavaScript, TypeScript, JSON, and Rip grammar files
+- Generates clean, efficient parsers
+
 **Type:** SLR(1) parser generator (similar to Yacc/Bison/Jison)
 
 ---
@@ -12,19 +17,23 @@
 
 ### What is Solar?
 
-Solar is an SLR(1) parser generator (similar to Yacc/Bison) that generates parsers from grammar specifications. Rip uses Solar's **s-expression mode** to generate parsers that output simple array-based s-expressions instead of traditional AST nodes.
+Solar is an SLR(1) parser generator that generates parsers from grammar specifications. It supports two output modes:
 
-**Key Innovation:** S-expressions as intermediate representation reduces compiler complexity by 50% (9,450 LOC vs CoffeeScript's 17,760 LOC).
+1. **S-expression mode** (recommended) - Outputs nested arrays for easy transformation
+2. **Jison-compatible mode** - Traditional AST node style
 
-**Unique Advantage:** Unlike most languages that depend on external parser generators (Yacc, Bison, Jison), **Rip includes its own parser generator** written in Rip itself! This makes Rip completely self-hosting with zero dependencies.
+**Key Innovation:** S-expressions as intermediate representation can reduce compiler complexity by 50% or more.
 
-### The Pipeline
+**Real-world example:** The Rip language compiler uses Solar's s-expression mode and achieves 9,450 LOC vs CoffeeScript's 17,760 LOC (46% reduction).
+
+### Typical Pipeline
 
 ```
-Source Code → CoffeeScript Lexer → Solar Parser → S-Expressions → Codegen → JavaScript
-             (3,146 LOC)         (340 LOC)       (arrays!)      (4,824 LOC)
-             15 years tested     Generated!      Clean IR!       Complete!
+Source Code → Lexer → Solar Parser → S-Expressions → Codegen → Output
+             (your)   (generated)    (arrays!)      (your)
 ```
+
+Solar handles the middle part - generating an efficient parser from your grammar.
 
 ---
 
@@ -32,10 +41,21 @@ Source Code → CoffeeScript Lexer → Solar Parser → S-Expressions → Codege
 
 ### Enabling S-Expression Mode
 
-In `src/grammar/grammar.rip`:
+In your grammar file (JavaScript example):
 
-```coffeescript
-mode = 'sexp'  # Enable s-expression output mode
+```javascript
+// grammar.js
+export default {
+  mode: 'sexp',  // Enable s-expression output mode
+
+  grammar: {
+    // Your grammar rules...
+  },
+
+  operators: [
+    // Your precedence rules...
+  ]
+};
 ```
 
 This tells Solar to generate a parser that builds s-expressions (nested arrays) instead of AST objects.
@@ -65,22 +85,35 @@ S-expressions are plain JavaScript arrays:
 
 ## Grammar Syntax
 
-### Helper Function
+### Basic Grammar Structure
 
-```coffeescript
-o = (pattern, action, options) ->
-  pattern = pattern.trim().replace /\s{2,}/g, ' '
-  [pattern, action ? 1, options]
-```
+Grammar rules in JavaScript:
 
-**Usage:**
-```coffeescript
-grammar =
-  RuleName: [
-    o 'TOKEN1 TOKEN2', action
-    o 'OTHER PATTERN', action, prec: 'OPERATOR'
+```javascript
+// grammar.js
+export default {
+  mode: 'sexp',  // or omit for Jison mode
+
+  grammar: {
+    RuleName: [
+      ['TOKEN1 TOKEN2', 'action'],
+      ['OTHER PATTERN', 'action', { prec: 'OPERATOR' }]
+    ],
+
+    Expression: [
+      ['NUMBER', '1'],  // Return first token
+      ['Expression + Expression', '["+", 1, 3]']  // Build s-expression
+    ]
+  },
+
+  operators: [
+    ['left', '+', '-'],
+    ['left', '*', '/']
   ]
+};
 ```
+
+Each rule is: `[pattern, action, options?]`
 
 ### Action Syntax - Three Styles
 
@@ -88,14 +121,16 @@ Solar's sexp mode auto-detects action style based on content:
 
 #### Style 1: Default (Pass-Through)
 
-**When:** Omit action parameter (defaults to `1`)
+**When:** Action is `1`, `'1'`, or omitted (defaults to `1`)
 
 **Behavior:** Returns first token
 
-```coffeescript
+```javascript
+// grammar.js
 Expression: [
-  o 'Value'      # Returns Value (position 1)
-  o 'Operation'  # Returns Operation (position 1)
+  ['Value'],           // Omit action (defaults to 1)
+  ['Operation', 1],    // Number works
+  ['Code', '1'],       // String works too
 ]
 ```
 
@@ -113,9 +148,10 @@ case 46: return $$[$0];  // Position 1
 **Behavior:** All bare numbers become `$$[$n]` token references
 
 **Example:**
-```coffeescript
+```javascript
+// grammar.js
 For: [
-  o 'FOR ForVariables FOROF Expression Block', '["for-of", 2, 4, null, 5]'
+  ['FOR ForVariables FOROF Expression Block', '["for-of", 2, 4, null, 5]']
 ]
 ```
 
@@ -144,9 +180,10 @@ case 327: return ["for-of", $$[$0-3], $$[$0-1], null, $$[$0]];
 **Behavior:** Only `$n` replaced; bare numbers preserved as literals
 
 **Example:**
-```coffeescript
+```javascript
+// grammar.js
 Parenthetical: [
-  o '( Body )', '$2.length === 1 ? $2[0] : $2'
+  ['( Body )', '$2.length === 1 ? $2[0] : $2']
 ]
 ```
 
@@ -165,10 +202,11 @@ case 303: return $$[$0-1].length === 1 ? $$[$0-1][0] : $$[$0-1];
 
 Spread arrays into parent array:
 
-```coffeescript
+```javascript
+// grammar.js
 Body: [
-  o 'Line', '[1]'                        # Wrap: [Line]
-  o 'Body TERMINATOR Line', '[...1, 3]'  # Spread: [...Body, Line]
+  ['Line', '[1]'],                         // Wrap: [Line]
+  ['Body TERMINATOR Line', '[...1, 3]']    // Spread: [...Body, Line]
 ]
 ```
 
@@ -186,11 +224,12 @@ case 4: return [...$$[$0-2], $$[$0]];
 
 **Use when:** Rule just forwards a single alternative
 
-```coffeescript
+```javascript
+// grammar.js
 Expression: [
-  o 'Value'      # Just return Value
-  o 'Code'       # Just return Code
-  o 'Operation'  # Just return Operation
+  ['Value'],       // Just return Value
+  ['Code'],        // Just return Code
+  ['Operation']    // Just return Operation
 ]
 ```
 
@@ -198,14 +237,15 @@ Expression: [
 
 **Use when:** Building simple s-expressions with token references
 
-```coffeescript
+```javascript
+// grammar.js
 If: [
-  o 'IF Expression Block', '["if", 2, 3]'
-  o 'IF Expression Block ELSE Block', '["if", 2, 3, 5]'
-]
+  ['IF Expression Block', '["if", 2, 3]'],
+  ['IF Expression Block ELSE Block', '["if", 2, 3, 5]']
+],
 
 Assignment: [
-  o 'Assignable = Expression', '["=", 1, 3]'
+  ['Assignable = Expression', '["=", 1, 3]']
 ]
 ```
 
@@ -219,13 +259,14 @@ Assignment: [
 - Literal numbers in output
 - Complex transformations
 
-```coffeescript
+```javascript
+// grammar.js
 Parenthetical: [
-  o '( Body )', '$2.length === 1 ? $2[0] : $2'
-]
+  ['( Body )', '$2.length === 1 ? $2[0] : $2']
+],
 
 While: [
-  o 'WhileSource Block', '$1.length === 2 ? [$1[0], $1[1], $2] : [$1[0], $1[1], $1[2], $2]'
+  ['WhileSource Block', '$1.length === 2 ? [$1[0], $1[1], $2] : [$1[0], $1[1], $1[2], $2]']
 ]
 ```
 
@@ -447,85 +488,115 @@ This is what Solar outputs and what Rip's codegen expects:
 
 ---
 
-## Working with the Grammar
+## Working with Grammars
 
-### Grammar File Location
+### Creating a Grammar File
 
-`src/grammar/grammar.rip` (831 lines)
+Create `grammar.js`:
 
-### Regenerate Parser
+```javascript
+// grammar.js
+export default {
+  mode: 'sexp',  // Enable s-expression mode
 
-After modifying the grammar:
+  grammar: {
+    Assignment: [
+      ['Assignable = Expression', '["=", 1, 3]'],
+      ['Assignable = TERMINATOR Expression', '["=", 1, 4]'],
+      ['Assignable = INDENT Expression OUTDENT', '["=", 1, 4]']
+    ]
+  },
 
-```bash
-bun run build:parser
+  operators: [
+    ['right', '=', ':', 'COMPOUND_ASSIGN'],
+    ['left', '+', '-'],
+    ['left', '*', '/']
+  ]
+};
 ```
 
-This regenerates `src/parser.js` (338 LOC, auto-generated).
+### Generate Parser
 
-### Example Rule
+```bash
+# Using the CLI:
+solar grammar.js -o parser.js
 
-```coffeescript
+# Or programmatically:
+import { Generator } from 'solar-parser';
+const generator = new Generator(grammar);
+const parserCode = generator.generate();
+```
+
+### Example Rule Breakdown
+
+```javascript
 Assignment: [
-  o 'Assignable = Expression', '["=", 1, 3]'
-  o 'Assignable = TERMINATOR Expression', '["=", 1, 4]'
-  o 'Assignable = INDENT Expression OUTDENT', '["=", 1, 4]'
+  ['Assignable = Expression', '["=", 1, 3]']
 ]
 ```
 
-**Breakdown:**
-- Pattern: `Assignable = Expression`
-- Tokens: Position 1 (Assignable), 2 (=), 3 (Expression)
-- Action: `'["=", 1, 3]'` becomes `["=", $$[$0-2], $$[$0]]`
-- Output: `["=", assignable, expression]`
+**How it works:**
+- **Pattern:** `Assignable = Expression`
+- **Tokens:** Position 1 (Assignable), 2 (=), 3 (Expression)
+- **Action:** `'["=", 1, 3]'` becomes `["=", $$[$0-2], $$[$0]]`
+- **Output:** `["=", assignableValue, expressionValue]`
 
 ### Precedence & Associativity
 
-Define at bottom of grammar:
+Define operator precedence:
 
-```coffeescript
-operators = """
-  right       = : COMPOUND_ASSIGN RETURN THROW EXTENDS
-  left        + -
-  left        * / % // %%
-  right       **
-  left        << >> >>>
-  left        < > <= >=
-  left        == != === !==
-  left        &
-  left        ^
-  left        |
-  left        &&
-  left        ||
-  left        ??
-  nonassoc    ++ --
-  right       UNARY DO
-  left        .
-"""
+```javascript
+// grammar.js
+export default {
+  operators: [
+    ['right', '=', ':', 'COMPOUND_ASSIGN'],
+    ['left', '+', '-'],
+    ['left', '*', '/', '%'],
+    ['right', '**'],
+    ['left', '<<', '>>', '>>>'],
+    ['left', '<', '>', '<=', '>='],
+    ['left', '==', '!=', '===', '!=='],
+    ['left', '&'],
+    ['left', '^'],
+    ['left', '|'],
+    ['left', '&&'],
+    ['left', '||'],
+    ['left', '??'],
+    ['nonassoc', '++', '--'],
+    ['left', '.']
+  ]
+};
 ```
+
+Operators are listed from **lowest to highest precedence**.
 
 ---
 
-## Debugging Grammar Rules
+## Debugging Grammars
 
-### Check Generated Parser
+### View Generated Parser
+
+After generating a parser, inspect the action code:
 
 ```bash
-# See the generated action code
-grep -A 2 "case NNN:" src/parser.js
+# See the generated parser
+cat parser.js | head -50
+
+# Find specific rule
+grep -A 2 "case NN:" parser.js
 ```
 
-### Test S-Expression Output
+### Test Your Parser
 
-```bash
-# See what parser emits
-echo 'x = 42' | ./bin/rip -s
+```javascript
+// test.js
+import { Parser } from './parser.js';
 
-# See tokens
-echo 'x = 42' | ./bin/rip -t
+const parser = new Parser();
+parser.lexer = myLexer;  // Attach your lexer
 
-# See generated JavaScript
-echo 'x = 42' | ./bin/rip -c
+const result = parser.parse('x = 42');
+console.log(result);  // See the s-expression output
 ```
 
 ### Common Issues
@@ -533,23 +604,23 @@ echo 'x = 42' | ./bin/rip -c
 **Issue:** Action using wrong token position
 
 **Solution:** Count tokens in pattern carefully:
-```coffeescript
-# Pattern: IF Expression Block ELSE Block
-#          1   2          3     4    5
-o 'IF Expression Block ELSE Block', '["if", 2, 3, 5]'
-#                                             ↑  ↑  ↑
-#                                          Expr Then Else
+```javascript
+// Pattern: IF Expression Block ELSE Block
+//          1   2          3     4    5
+['IF Expression Block ELSE Block', '["if", 2, 3, 5]']
+//                                          ↑  ↑  ↑
+//                                       Expr Then Else
 ```
 
 **Issue:** Numbers being replaced incorrectly
 
 **Solution:** Use Style 3 with `$n` for complex logic:
-```coffeescript
-# WRONG (Style 2): '1' would become token reference
-o 'Body', '$1[0]'
+```javascript
+// WRONG (Style 2): '1' would become token reference
+['Body', '$1[0]']
 
-# RIGHT (Style 3): Use $ prefix
-o 'Body', '$1.length === 1 ? $1[0] : $1'
+// RIGHT (Style 3): Use $ prefix to mark what to replace
+['Body', '$1.length === 1 ? $1[0] : $1']
 ```
 
 ---
@@ -589,53 +660,45 @@ o 'Body', '$1.length === 1 ? $1[0] : $1'
 
 ## Advanced Features
 
-### String Object Metadata
+### Lexer Integration
 
-The CoffeeScript lexer attaches rich metadata to String objects:
+Solar works with any lexer that provides a token stream. The generated parser expects:
 
-**For STRING tokens:**
-- `.quote` - Original quote type (`'` or `"`)
-- `.double` - Is double-quoted
-- `.indent` - Heredoc indentation
-- `.initialChunk` - First chunk of heredoc
-- `.finalChunk` - Last chunk of heredoc
-
-**For NUMBER tokens:**
-- `.parsedValue` - Pre-parsed number (handles hex, octal, binary, BigInt)
-
-**For OPERATOR tokens:**
-- `.original` - Original text (e.g., `is` for `===`)
-
-**For ALL tokens:**
-- Location data (line, column, range) for sourcemaps
-
-**Rip usage:**
-- Quote preservation using `.quote`
-- Range optimization using `.parsedValue`
-- Future: Sourcemaps using location data
-
-### Context-Aware Generation
-
-The codegen uses **context parameter** for optimal output:
-
+**Token format:**
 ```javascript
-generate(sexpr, context = 'statement')
+{
+  yytext: string,    // Token text
+  yylloc: {          // Location (optional)
+    first_line: number,
+    last_line: number,
+    first_column: number,
+    last_column: number
+  }
+}
 ```
 
-**Contexts:**
-- `'statement'` - Top-level, in blocks
-- `'value'` - In expressions, assignments, returns
-
-**Example:**
-```rip
-# Statement context - plain loop
-console.log(x) for x in arr
-# → for (const x of arr) { console.log(x); }
-
-# Value context - array comprehension
-result = (x * 2 for x in arr)
-# → result = (() => { const result = []; ... })()
+**Lexer interface:**
+```javascript
+lexer = {
+  setInput(input, yy) { /* ... */ },
+  lex() { /* return token id */ },
+  yytext: string,
+  yyleng: number,
+  yylineno: number,
+  yylloc: object
+}
 ```
+
+### Token Metadata (Optional)
+
+Your lexer can attach metadata to tokens as properties. This is preserved through the parse and available in actions.
+
+**Examples:**
+- String tokens: `.quote`, `.double` (for quote preservation)
+- Number tokens: `.parsedValue` (for pre-parsed values)
+- All tokens: location data for source maps
+
+**Note:** The CoffeeScript/Rip lexer does this extensively, but it's optional for your parser.
 
 ---
 
@@ -643,59 +706,66 @@ result = (x * 2 for x in arr)
 
 ### 1. Use Style 2 for Most Rules
 
-```coffeescript
-# Clean and simple
-o 'FOR ForVariables IN Expression Block', '["for-in", 2, 4, null, null, 5]'
+```javascript
+// Clean and simple s-expression building
+For: [
+  ['FOR ForVariables IN Expression Block', '["for-in", 2, 4, null, null, 5]']
+]
 ```
 
 ### 2. Use Style 3 Sparingly
 
 Only when you need conditional logic:
 
-```coffeescript
-# Unwrap single-element bodies
-o '( Body )', '$2.length === 1 ? $2[0] : $2'
+```javascript
+// Unwrap single-element bodies
+Parenthetical: [
+  ['( Body )', '$2.length === 1 ? $2[0] : $2']
+]
 ```
 
 ### 3. Test Incrementally
 
 ```bash
 # After each grammar change:
-bun run build:parser
-echo 'test code' | ./bin/rip -s
+solar grammar.js -o parser.js
+
+# Test with your lexer:
+node test-parser.js
 ```
 
 ### 4. Check Generated Code
 
 ```bash
 # Verify Solar generated correct action
-grep -A 2 "case NNN:" src/parser.js
+grep -A 2 "case NNN:" parser.js
 ```
 
 ### 5. Document Token Positions
 
-```coffeescript
-# Makes rules self-documenting
-o 'IF Expression Block ELSE Block', '["if", 2, 3, 5]'
-#  1   2          3     4    5            cond then else
+```javascript
+// Makes rules self-documenting
+If: [
+  ['IF Expression Block ELSE Block', '["if", 2, 3, 5]']
+  // 1   2          3     4    5            cond then else
+]
 ```
 
 ---
 
 ## Integration Checklist
 
-For Solar to generate Rip-compatible s-expressions:
+For using Solar's s-expression mode effectively:
 
-- ✅ Use `mode = 'sexp'` in grammar
-- ✅ Emit plain arrays (no metadata)
-- ✅ Use string heads (`"if"`, `"def"`, etc.)
-- ✅ Use `['...', expr]` for spread (unary)
-- ✅ Use `['..', from, to]` for inclusive ranges
-- ✅ Use `['...', from, to]` for exclusive ranges
-- ✅ Use `['block', ...stmts]` for multi-statement blocks
+- ✅ Set `mode: 'sexp'` in your grammar
+- ✅ Actions return plain arrays (no metadata needed)
+- ✅ Use string heads for node types (`"if"`, `"def"`, `"+"`, etc.)
 - ✅ Use `null` for optional/missing values
-- ✅ Handle destructuring patterns correctly
-- ✅ Preserve String object metadata from lexer
+- ✅ Design your s-expression format to match your codegen needs
+- ✅ Document your node type conventions
+- ✅ Keep s-expressions simple and consistent
+- ✅ Test with small examples first
+- ✅ Verify generated parser output matches expectations
 
 ---
 
@@ -749,72 +819,99 @@ case '+': {
 
 ## Solar Generator Details
 
-### File: `src/grammar/solar.rip`
+### Implementation
 
-**Size:** 1,047 LOC
-**Purpose:** Generates SLR(1) parsers from grammar specs
+**Source:** `src/solar.ts` (TypeScript)
+**Compiled:** `lib/solar.js` (JavaScript ES2022)
+**Size:** 1,394 LOC
+
 **Features:**
-- Lexer-less (works with any token stream)
-- S-expression mode
-- Precedence handling
-- Conflict resolution
+- Zero dependencies
+- Lexer-agnostic (works with any token stream)
+- S-expression mode + Jison-compatible mode
+- Automatic precedence handling
+- Intelligent conflict resolution
+- Clean, efficient parse table generation
 
-### Generated Parser: `src/parser.js`
+### Generated Parsers
 
-**Size:** 340 LOC (auto-generated)
+**Typical output size:** 300-400 LOC (depends on grammar)
+
 **Contains:**
-- Parse table
-- Action functions
-- State machine
+- Compact parse table (state machine)
+- Action functions (from your grammar)
+- LR parser runtime (~100 LOC)
 
-**DO NOT EDIT DIRECTLY** - Regenerate from grammar instead!
+**Best practice:** Regenerate from grammar when making changes, don't edit parser.js directly!
 
 ---
 
 ## Quick Reference
 
-### Common Patterns
+### Common Grammar Patterns
 
 **Assignment:**
-```coffeescript
-o 'Assignable = Expression', '["=", 1, 3]'
+```javascript
+['Assignable = Expression', '["=", 1, 3]']
 ```
 
 **Binary operator:**
-```coffeescript
-o 'Expression + Expression', '["+", 1, 3]'
+```javascript
+['Expression + Expression', '["+", 1, 3]']
 ```
 
 **Unary operator:**
-```coffeescript
-o '! Expression', '["!", 2]'
+```javascript
+['! Expression', '["!", 2]']
 ```
 
 **Function:**
-```coffeescript
-o 'DEF Identifier ParamList Block', '["def", 2, 3, 4]'
+```javascript
+['FUNCTION Identifier ( ParamList ) Block', '["function", 2, 4, 6]']
 ```
 
 **If/else:**
-```coffeescript
-o 'IF Expression Block', '["if", 2, 3]'
-o 'IF Expression Block ELSE Block', '["if", 2, 3, 5]'
+```javascript
+['IF Expression Block', '["if", 2, 3]'],
+['IF Expression Block ELSE Block', '["if", 2, 3, 5]']
 ```
 
 **For loop:**
-```coffeescript
-o 'FOR ForVariables IN Expression Block', '["for-in", 2, 4, null, null, 5]'
+```javascript
+['FOR Variable IN Expression Block', '["for-in", 2, 4, 5]']
 ```
 
-### Files Reference
+### Complete Example Grammar
 
-| File | Purpose | Size | Modify? |
-|------|---------|------|---------|
-| `src/grammar/grammar.rip` | Grammar spec | 795 LOC | ✅ Yes |
-| `src/grammar/solar.rip` | Parser generator | 1,047 LOC | ❌ No |
-| `src/parser.js` | Generated parser | 340 LOC | ❌ No (auto-gen) |
-| `src/lexer.js` | Lexer + Rewriter | 3,145 LOC | ⚠️ Rewriter only |
-| `src/codegen.js` | Code generator | 4,738 LOC | ✅ Yes |
+```javascript
+// simple-calc.js
+export default {
+  mode: 'sexp',
+
+  grammar: {
+    Program: [
+      ['Expression', '[1]']
+    ],
+
+    Expression: [
+      ['NUMBER'],
+      ['Expression + Expression', '["+", 1, 3]'],
+      ['Expression * Expression', '["*", 1, 3]'],
+      ['( Expression )', '2']
+    ]
+  },
+
+  operators: [
+    ['left', '+'],
+    ['left', '*']
+  ]
+};
+```
+
+Generate parser:
+```bash
+solar simple-calc.js -o calc-parser.js
+```
 
 ---
 
@@ -893,19 +990,23 @@ The speedup is in **generation time**, not runtime. Both produce equally fast pa
 
 ## Summary
 
-Solar's s-expression mode is the **secret sauce** that makes Rip practical:
+Solar's s-expression mode is a powerful approach for building compilers and interpreters:
 
-1. **Simple IR:** Arrays instead of AST classes
-2. **Grammar-driven:** Modify spec, regenerate parser
-3. **Battle-tested:** Built on CoffeeScript's proven lexer
-4. **Maintainable:** 50% less code than CoffeeScript
-5. **Extensible:** Add features by adding switch cases
+1. **Simple IR:** Arrays instead of AST classes (easy to inspect and debug)
+2. **Grammar-driven:** Modify spec, regenerate parser (fast iteration)
+3. **Battle-tested:** Proven approach used in production compilers
+4. **Maintainable:** Significantly less code than traditional AST approaches
+5. **Extensible:** Add features by adding switch cases (no class hierarchies)
 
-**Result:** A production-ready compiler in 9,450 LOC instead of CoffeeScript's 17,760 LOC!
+**Real-world results:** The Rip compiler achieves 9,450 LOC using s-expressions vs CoffeeScript's 17,760 LOC with traditional ASTs (46% reduction).
 
 ---
 
-**For more details:**
-- Grammar file: `src/grammar/grammar.rip`
-- Code generator: `src/codegen.js`
-- Test examples: `test/rip/`
+## Learn More
+
+**Package:** `npm install solar-parser` or `bun add solar-parser`  
+**Repository:** https://github.com/shreeve/solar  
+**Examples:** See README.md for complete usage examples  
+**Real-world usage:** The Rip language compiler (https://github.com/shreeve/rip-lang)  
+
+**Questions?** Open an issue on GitHub!
