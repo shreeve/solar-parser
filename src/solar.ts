@@ -1363,13 +1363,13 @@ Examples:
 
       // Load grammar
       let grammar: Grammar;
-      if (grammarFile.endsWith('.js') || grammarFile.endsWith('.ts')) {
+      if (grammarFile.endsWith('.js') || grammarFile.endsWith('.ts') || grammarFile.endsWith('.rip')) {
         const module = await import(pathToFileURL(path.resolve(grammarFile)).href);
         grammar = module.default;
       } else if (grammarFile.endsWith('.json')) {
         grammar = JSON.parse(fs.readFileSync(grammarFile, 'utf8'));
       } else {
-        throw new Error("Unsupported format. Use .js, .ts, or .json");
+        throw new Error("Unsupported format. Use .js, .ts, .json, or .rip (with Bun loader)");
       }
       if (!grammar) {
         throw new Error("Failed to load grammar");
