@@ -1,0 +1,51 @@
+{
+  "name": "solar-parser",
+  "version": "0.1.0",
+  "description": "Fast SLR(1) parser generator with s-expression mode (~150× faster than Jison)",
+  "keywords": [
+    "parser",
+    "generator",
+    "slr",
+    "slr1",
+    "s-expression",
+    "sexpr",
+    "jison",
+    "yacc",
+    "bison",
+    "compiler",
+    "transpiler",
+    "ast"
+  ],
+  "homepage": "https://github.com/shreeve/solar",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/shreeve/solar.git"
+  },
+  "bugs": {
+    "url": "https://github.com/shreeve/solar/issues"
+  },
+  "license": "MIT",
+  "author": "Steve Shreeve <steve.shreeve@gmail.com>",
+  "main": "lib/index.js",
+  "types": "lib/index.d.ts",
+  "bin": {
+    "solar": "./bin/solar"
+  },
+  "files": [
+    "lib/",
+    "bin/",
+    "README.md",
+    "REFERENCE.md",
+    "LICENSE"
+  ],
+  "scripts": {
+    "build": "echo 'TypeScript compilation not yet configured' && exit 1",
+    "test": "echo 'Test suite not yet configured' && exit 1",
+    "prepublishOnly": "npm run build"
+  },
+  "engines": {
+    "node": ">=14.0.0"
+  },
+  "devDependencies": {},
+  "dependencies": {}
+}
