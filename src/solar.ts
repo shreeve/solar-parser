@@ -1,3 +1,5 @@
+#!/usr/bin/env node
+
 /**
  * Solar - SLR(1) Parser Generator
  *
@@ -10,8 +12,8 @@
  * @license MIT
  */
 
-import fs from 'fs';
-import path from 'path';
+import * as fs from 'fs';
+import * as path from 'path';
 import { fileURLToPath, pathToFileURL } from 'url';
 
 const VERSION = '1.0.0';
