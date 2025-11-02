@@ -1,6 +1,6 @@
 {
   "name": "solar-parser",
-  "version": "1.0.5",
+  "version": "1.0.6",
   "type": "module",
   "description": "Fast SLR(1) parser generator with s-expression mode (~150× faster than Jison)",
   "keywords": [
