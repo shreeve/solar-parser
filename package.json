@@ -40,8 +40,8 @@
     "LICENSE"
   ],
   "scripts": {
-    "build": "tsc",
     "prebuild": "rm -f lib/solar.js lib/solar.d.ts lib/*.map tsconfig.tsbuildinfo",
+    "build": "tsc",
     "postbuild": "chmod +x lib/solar.js",
     "watch": "tsc --watch",
     "pack": "npm pack --dry-run",
