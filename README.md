@@ -169,6 +169,25 @@ solar --help
 npx solar-parser grammar.js -o parser.js
 ```
 
+**Runtime Selection:**
+
+Solar works with both Bun and Node.js. The runtime is automatically determined by how you install:
+
+- **Bun only installed:** `solar` runs on Bun (~58ms) ⚡
+- **npm only installed:** `solar` runs on Node.js (~180ms) ✅
+- **Both installed:** `solar` uses the package manager that installed it
+
+**Force Bun for best performance** (if you have both):
+
+```bash
+# One-time command:
+bun $(which solar) grammar.js -o parser.js
+
+# Or create an alias for convenience:
+alias solar-bun='bun $(which solar)'
+solar-bun grammar.js -o parser.js  # Always uses Bun
+```
+
 ### Basic Usage (S-Expression Mode)
 
 ```javascript
