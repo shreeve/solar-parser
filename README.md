@@ -1,3 +1,7 @@
+<p align="center">
+  <img src="docs/solar-1280w.png" alt="Solar Logo" width="800">
+</p>
+
 # Solar
 
 **The Fast SLR(1) Parser Generator with S-Expression Mode**
@@ -8,6 +12,10 @@ Solar is a standalone parser generator (like Yacc/Bison/Jison) that generates pa
 # Jison:  12,500ms to generate parser 😴
 # Solar:      80ms to generate parser ⚡
 
+# Install with Bun (recommended):
+bun add solar-parser
+
+# Or with npm:
 npm install solar-parser
 ```
 
@@ -103,16 +111,26 @@ Why does this matter? **Iteration speed.**
 
 ### Benchmark Results
 
-Real-world test (Rip's grammar: 91 types, 406 production rules):
+**Real-world test:** Rip's CoffeeScript-compatible grammar (91 types, 406 production rules, 802 lines)
 
-| Metric | Jison | Solar | Winner |
-|--------|-------|-------|--------|
-| **Parse time** | 12,500ms | 80ms | **Solar ~150×** |
-| **Dependencies** | Many | Zero | **Solar** |
-| **Code size** | 2,285 LOC | 1,047 LOC | **Solar 54%** |
-| **Output** | AST classes | S-expressions | **Solar (simpler)** |
+| Metric | Jison | Solar (Bun) | Solar (Node) | Winner |
+|--------|-------|-------------|--------------|--------|
+| **Generation time** | 12,500ms | 65ms | 180ms | **Solar ~150×** |
+| **Dependencies** | Many | Zero | Zero | **Solar** |
+| **Code size** | 2,285 LOC | 1,394 LOC | 1,394 LOC | **Solar 38%** |
+| **Output** | AST classes | S-expressions | S-expressions | **Solar (simpler)** |
 
-**Note:** Runtime performance is identical - both generate equally fast SLR(1) state machines. The speedup is in *generation time*.
+**Performance breakdown** (Solar on Bun):
+```
+processGrammar:     3.21ms  (4%)
+buildLRAutomaton:  39.70ms  (61%)
+processLookaheads: 10.86ms  (17%)
+buildParseTable:    9.85ms  (15%)
+──────────────────────────
+Total:             64.72ms
+```
+
+**Note:** Jison took 12.5 seconds on a comparable grammar. Solar's runtime parser performance is identical to Jison (both generate SLR(1) state machines). The speedup is in *generation time*, enabling rapid iteration.
 
 ---
 
@@ -120,8 +138,35 @@ Real-world test (Rip's grammar: 91 types, 406 production rules):
 
 ### Installation
 
+**With Bun (recommended):**
+
 ```bash
+# As a library
+bun add solar-parser
+
+# As a global CLI tool
+bun add -g solar-parser
+
+# Now you can use the 'solar' command anywhere:
+solar grammar.js -o parser.js
+solar --help
+```
+
+**With Node.js:**
+
+```bash
+# As a library
 npm install solar-parser
+
+# As a global CLI tool
+npm install -g solar-parser
+
+# Now you can use the 'solar' command anywhere:
+solar grammar.js -o parser.js
+solar --help
+
+# Or use without installing:
+npx solar-parser grammar.js -o parser.js
 ```
 
 ### Basic Usage (S-Expression Mode)
@@ -338,7 +383,7 @@ Your codegen just checks `rest.length` to determine meaning.
 
 ## Grammar Modes
 
-Solar supports three grammar modes:
+Solar supports two grammar modes:
 
 ### 1. S-Expression Mode (Recommended)
 
@@ -371,22 +416,11 @@ const grammar = {
 
 **Output:** Whatever your actions return (AST nodes, objects, etc.)
 
-### 3. Solar Native Mode (Experimental)
-
-```javascript
-const grammar = {
-  grammar: {
-    Expression: [
-      ['NUMBER', {$ast: '@', value: 1}],  // Directive objects
-      ['Expression + Expression', {$ast: 'BinaryOp', op: '+', left: 1, right: 3}]
-    ]
-  }
-};
-```
-
 ---
 
 ## CLI Usage
+
+After installing globally (see Installation above), use the `solar` command:
 
 ```bash
 # Generate parser from grammar file
@@ -395,11 +429,24 @@ solar grammar.js -o parser.js
 # Show statistics
 solar --stats grammar.js
 
-# Compress with Brotli (requires Brotli support)
-solar --compress -o parser.js grammar.js
+# Combine stats and generation
+solar --stats --output parser.js grammar.js
 
 # Get help
 solar --help
+```
+
+**Without global install:**
+
+```bash
+# With Bun:
+bun x solar-parser grammar.js -o parser.js
+
+# With npm/npx:
+npx solar-parser grammar.js -o parser.js
+
+# Or run directly:
+node node_modules/solar-parser/lib/solar.js grammar.js -o parser.js
 ```
 
 ---
@@ -415,7 +462,7 @@ const generator = new Generator(grammar, options);
 ```
 
 **Options:**
-- `compress: boolean` - Compress output with Brotli
+- `debug: boolean` - Enable debug tracing output
 
 **Methods:**
 - `generate()` - Returns parser code as string
@@ -436,34 +483,39 @@ const result = parser.parse(input);
 
 ## Versions Available
 
-Solar is available in **three implementations**:
+Solar is distributed as **compiled JavaScript (ES2022)** with full TypeScript support:
 
-### 1. **TypeScript** (Recommended for most users)
+### **Production Package** (TypeScript + JavaScript)
 ```bash
+# With Bun (recommended):
+bun add solar-parser
+
+# With npm:
 npm install solar-parser
 ```
-- Full type safety
-- Modern tooling support
-- Easy to integrate
 
-### 2. **JavaScript (ES6)**
+**What you get:**
+- ✅ Compiled JavaScript (ES2022) - ready to run
+- ✅ TypeScript definitions (.d.ts) - full type safety
+- ✅ Zero build step required
+- ✅ Works with Bun, Node.js, and Deno
+- ✅ CLI command included
+
+### **Source Code** (Reference)
+
+The original implementation in **Rip** is available in the repository:
+
 ```bash
-npm install solar-parser
-```
-- Zero build step
-- Works everywhere
-- Identical to TypeScript output
+# Clone the repo to see the source:
+git clone https://github.com/shreeve/solar
+cd solar/src/
 
-### 3. **Rip** (Source language)
-```bash
-# Requires Rip language (https://github.com/shreeve/rip-lang)
-bun run solar.rip grammar.rip
+# Files:
+# - solar.ts   (TypeScript source - canonical)
+# - solar.rip  (Rip reference implementation)
 ```
-- Original implementation
-- Self-hosting (Solar compiles itself!)
-- Elegant syntax, if you're into that sort of thing
 
-**Note:** All three versions produce identical output and have identical performance. The TypeScript/JavaScript versions are recommended for most developers.
+**Note:** The TypeScript version is compiled from `src/solar.ts` and is the primary distribution. The Rip version (`src/solar.rip`) serves as the reference implementation that proves the approach works.
 
 ---
 
@@ -670,23 +722,38 @@ Solar is now being extracted as a standalone tool because the approach is valuab
 
 Solar is designed to be clean-room simple:
 
-1. **Core files:**
-   - `src/solar.ts` - TypeScript implementation (primary)
-   - `solar.rip` - Original Rip implementation (reference)
-   - `solar.js` - Compiled JavaScript version
+1. **Repository structure:**
+   ```
+   src/
+     solar.ts        # TypeScript source (edit this)
+     solar.rip       # Rip reference (for comparison)
+   lib/
+     solar.js        # Compiled output (generated)
+     solar.d.ts      # Type definitions (generated)
+     index.js        # Entry point
+   ```
 
-2. **Development:**
+2. **Development workflow:**
    ```bash
-   npm install
-   npm run build    # Compile TypeScript
-   npm test         # Run tests
+   # Clone and setup
+   git clone https://github.com/shreeve/solar
+   cd solar
+   npm install        # or: bun install
+
+   # Make changes to src/solar.ts
+   npm run build      # Compile TypeScript → lib/
+   npm run watch      # Auto-compile on changes
+
+   # Test the CLI
+   node lib/solar.js --help
    ```
 
 3. **Philosophy:**
    - Keep it simple
-   - Zero dependencies
+   - Zero runtime dependencies
    - Fast feedback (don't sacrifice generation speed)
    - S-expressions first
+   - ES2022 modern JavaScript
 
 ---
 
@@ -725,7 +792,7 @@ A: Solar is SLR(1). For most languages, this is sufficient. If you need stronger
 A: PEG doesn't handle left recursion naturally. Solar/SLR(1) does.
 
 **Q: Do I need to know Rip?**
-A: No! Use the TypeScript or JavaScript version. The Rip version is just the reference implementation.
+A: No! The npm package is compiled JavaScript (ES2022) with TypeScript definitions. The Rip version is just the reference implementation in the source repository.
 
 **Q: Can I output JSON/XML/etc instead of s-expressions?**
 A: Yes! Your grammar actions can return anything. S-expressions are just the recommended approach.

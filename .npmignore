@@ -6,6 +6,7 @@ test/
 tests/
 *.rip
 tsconfig.json
+*.tsbuildinfo
 .gitignore
 .git/
 

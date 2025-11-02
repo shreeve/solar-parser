@@ -1,6 +1,7 @@
 {
   "name": "solar-parser",
-  "version": "0.1.0",
+  "version": "1.0.0",
+  "type": "module",
   "description": "Fast SLR(1) parser generator with s-expression mode (~150× faster than Jison)",
   "keywords": [
     "parser",
@@ -29,23 +30,27 @@
   "main": "lib/index.js",
   "types": "lib/index.d.ts",
   "bin": {
-    "solar": "./bin/solar"
+    "solar": "./lib/solar.js"
   },
   "files": [
     "lib/",
-    "bin/",
+    "docs/",
     "README.md",
     "REFERENCE.md",
     "LICENSE"
   ],
   "scripts": {
-    "build": "echo 'TypeScript compilation not yet configured' && exit 1",
+    "build": "tsc",
+    "prebuild": "rm -rf lib/*.js lib/*.d.ts lib/*.map",
+    "watch": "tsc --watch",
     "test": "echo 'Test suite not yet configured' && exit 1",
     "prepublishOnly": "npm run build"
   },
   "engines": {
-    "node": ">=14.0.0"
+    "node": ">=16.11.0"
   },
-  "devDependencies": {},
+  "devDependencies": {
+    "typescript": "^5.0.0"
+  },
   "dependencies": {}
 }

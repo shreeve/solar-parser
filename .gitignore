@@ -8,6 +8,7 @@ lib/*.js
 lib/*.d.ts
 lib/*.map
 !lib/index.js
+*.tsbuildinfo
 
 # Logs
 *.log
