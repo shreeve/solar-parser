@@ -17,7 +17,7 @@
  *   solar grammar.js -o parser.js
  *
  * @author Steve Shreeve <steve.shreeve@gmail.com>
- * @version 1.0.8
+ * @version 1.1.0
  * @license MIT
  */
 
@@ -25,11 +25,7 @@ import * as fs from 'fs';
 import * as path from 'path';
 import { fileURLToPath, pathToFileURL } from 'url';
 
-// Read version from package.json
-const __dirname = path.dirname(fileURLToPath(import.meta.url));
-const pkgPath = path.join(__dirname, '../package.json');
-const pkg = JSON.parse(fs.readFileSync(pkgPath, 'utf8'));
-const VERSION = pkg.version;
+const VERSION = '1.1.0';
 
 // ==============================================================================
 // Type Definitions
