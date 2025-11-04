@@ -7,7 +7,7 @@
  * Clean implementation influenced by Jison, rewritten in TypeScript for
  * type safety, readability, and maintainability.
  *
- * Performance: ~58ms on Bun, ~180ms on Node.js
+ * Relative performance for another grammar: ~58ms on Bun, ~180ms on Node.js
  * For best performance, install and run with Bun:
  *   bun add -g solar-parser
  *   solar grammar.js -o parser.js
