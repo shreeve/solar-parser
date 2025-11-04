@@ -743,8 +743,7 @@ Solar is designed to be clean-room simple:
 1. **Repository structure:**
    ```
    lib/
-     solar.js        # Source code (edit directly!)
-     index.js        # Entry point
+     solar.js        # Source code & entry point (ONE FILE!)
    scripts/
      sync-version.cjs # Version sync utility
    ```
