@@ -25,7 +25,11 @@ import * as fs from 'fs';
 import * as path from 'path';
 import { fileURLToPath, pathToFileURL } from 'url';
 
-const VERSION = '1.0.8';
+// Read version from package.json
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
+const pkgPath = path.join(__dirname, '../package.json');
+const pkg = JSON.parse(fs.readFileSync(pkgPath, 'utf8'));
+const VERSION = pkg.version;
 
 // ==============================================================================
 // Type Definitions
