@@ -1289,7 +1289,9 @@ function formatAtom(elem: any): string {
   if (Array.isArray(elem)) return '(???)';
   if (typeof elem === 'number') return String(elem);
   if (elem === null) return 'null';
+  if (elem === undefined) return 'undefined';
   if (elem === '') return '""';
+  if (typeof elem === 'object') return JSON.stringify(elem);
   return String(elem);
 }
 
@@ -1388,14 +1390,14 @@ Options:
   -h, --help              Show this help
   -v, --version           Show version
   -i, --info              Show grammar information
-  -s, --sexpr <input>     Parse input and pretty-print s-expression
+  -s, --sexpr             Show grammar as s-expression
   -o, --output <file>     Output file (default: parser.js)
 
 Examples:
   solar grammar.js
   solar --info grammar.js
+  solar --sexpr grammar.js
   solar -o parser.js grammar.js
-  solar --sexpr "x = 42" grammar.js
 `);
     };
 
@@ -1421,7 +1423,7 @@ Examples:
       help: false,
       version: false,
       info: false,
-      sexpr: null,
+      sexpr: false,
       output: 'parser.js'
     };
     let grammarFile: string | null = null;
@@ -1444,7 +1446,7 @@ Examples:
           break;
         case '-s':
         case '--sexpr':
-          options.sexpr = process.argv[++i + 2];
+          options.sexpr = true;
           break;
         case '-o':
         case '--output':
@@ -1491,6 +1493,13 @@ Examples:
         throw new Error("Failed to load grammar");
       }
 
+      // Show grammar structure
+      if (options.sexpr) {
+        console.log('\nGrammar Structure:');
+        console.log(JSON.stringify(grammar, null, 2));
+        return;
+      }
+
       // Generate parser
       const generator = new Generator(grammar, options);
 
@@ -1498,20 +1507,7 @@ Examples:
         showStats(generator);
       }
 
-      if (options.sexpr) {
-        // Parse input and pretty-print s-expression
-        const parser = generator.createParser();
-        try {
-          const result = parser.parse(options.sexpr);
-          console.log('\nS-Expression Output:');
-          console.log(prettyPrint(result));
-        } catch (error: any) {
-          console.error("Parse error:", error.message);
-          process.exit(1);
-        }
-      }
-
-      if (!options.info && !options.sexpr) {
+      if (!options.info) {
         const parserCode = generator.generate();
         fs.writeFileSync(options.output, parserCode);
         console.log(`\nParser generated: ${options.output}`);
