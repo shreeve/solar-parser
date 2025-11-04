@@ -744,8 +744,8 @@ Solar is designed to be clean-room simple:
    ```
    lib/
      solar.js        # Source code & entry point (ONE FILE!)
-   scripts/
-     sync-version.cjs # Version sync utility
+   docs/
+     calculator.js   # Example grammar
    ```
 
 2. **Development workflow:**
@@ -761,7 +761,10 @@ Solar is designed to be clean-room simple:
    bun lib/solar.js --help
    bun lib/solar.js docs/calculator.js -o test.js
    
-   # Publish (syncs version automatically)
+   # To publish:
+   # 1. Update version in package.json
+   # 2. Update VERSION constant in lib/solar.js (line 24)
+   # 3. Update @version in JSDoc (line 16)
    npm publish
    ```
 

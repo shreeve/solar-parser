@@ -2,7 +2,7 @@
   "name": "solar-parser",
   "version": "1.2.0",
   "type": "module",
-  "description": "Fast SLR(1) parser generator with s-expression mode (~150× faster than Jison)",
+  "description": "Fast SLR(1) parser generator with s-expression mode (~215x faster than Jison)",
   "keywords": [
     "parser",
     "generator",
@@ -38,10 +38,7 @@
     "REFERENCE.md",
     "LICENSE"
   ],
-  "scripts": {
-    "sync-version": "node scripts/sync-version.js",
-    "prepublishOnly": "npm run sync-version"
-  },
+  "scripts": {},
   "engines": {
     "node": ">=16.11.0"
   }
