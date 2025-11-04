@@ -17,7 +17,7 @@
  *   solar grammar.js -o parser.js
  *
  * @author Steve Shreeve <steve.shreeve@gmail.com>
- * @version 1.1.0
+ * @version 1.1.1
  * @license MIT
  */
 
@@ -25,7 +25,7 @@ import * as fs from 'fs';
 import * as path from 'path';
 import { fileURLToPath, pathToFileURL } from 'url';
 
-const VERSION = '1.1.0';
+const VERSION = '1.1.1';
 
 // ==============================================================================
 // Type Definitions
