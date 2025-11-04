@@ -1258,8 +1258,8 @@ export default parser
 // ==============================================================================
 
 /**
- * 
- * 
+ *
+ *
  * Determine if an array should be formatted inline (single line)
  * @param arr - Array to check
  * @param inlineForms - Optional set of forms that should be inline
@@ -1519,24 +1519,37 @@ Examples:
       if (options.sexpr) {
         // Build s-expression structure
         const parts: string[] = ['(grammar'];
-
+        
         if (grammar.mode) {
           parts.push(`  (mode ${grammar.mode})`);
         }
-
+        
         if (grammar.grammar) {
           parts.push('  (rules');
           for (const [name, productions] of Object.entries(grammar.grammar)) {
             parts.push(`    (${name}`);
             for (const prod of productions as any[]) {
-              const prodStr = JSON.stringify(prod);
+              // Format production as s-expression: (pattern action options?)
+              const pattern = prod[0] || '';
+              const action = prod[1] !== undefined ? prod[1] : 1;
+              const options = prod[2];
+              
+              let prodStr = `(${pattern}`;
+              if (action !== undefined) {
+                prodStr += ` ${typeof action === 'string' ? action : JSON.stringify(action)}`;
+              }
+              if (options) {
+                prodStr += ` ${JSON.stringify(options)}`;
+              }
+              prodStr += ')';
+              
               parts.push(`      ${prodStr}`);
             }
             parts.push(`    )`);
           }
           parts.push('  )');
         }
-
+        
         if (grammar.operators && grammar.operators.length > 0) {
           parts.push('  (operators');
           for (const op of grammar.operators) {
@@ -1545,7 +1558,7 @@ Examples:
           }
           parts.push('  )');
         }
-
+        
         parts.push(')');
         console.log(parts.join('\n'));
         return;
