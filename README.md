@@ -4,20 +4,19 @@
 
 # Solar
 
-**The Fast SLR(1) Parser Generator with S-Expression Mode**
+**Fast SLR(1) Parser Generator with S-Expression Mode**
 
-Solar is a standalone parser generator (like Yacc/Bison/Jison) that generates parsers **~215× faster** than Jison while producing cleaner, simpler output. Instead of forcing you into complex AST class hierarchies, Solar offers **s-expression mode** - outputting simple nested arrays that are trivial to transform and debug.
+Solar is a standalone parser generator (like Yacc/Bison/Jison) that generates parsers **~215× faster** than Jison while producing cleaner, simpler output. Instead of complex AST class hierarchies, Solar offers **s-expression mode** - outputting simple nested arrays that are trivial to transform and debug.
 
 ```bash
 # Jison:  12,500ms to generate parser 😴
 # Solar:      58ms to generate parser ⚡
 
-# Install with Bun (recommended):
-bun add solar-parser
-
-# Or with npm:
-npm install solar-parser
+bun add solar-parser      # Recommended (fastest)
+npm install solar-parser  # Also works
 ```
+
+**One self-contained JavaScript file. Zero dependencies. Maximum simplicity.**
 
 ---
 
@@ -26,7 +25,7 @@ npm install solar-parser
 **If you've ever wished Jison was:**
 - ⚡ **~215× faster** at generating parsers
 - 🎯 **Simpler** - arrays instead of AST classes
-- 📦 **Smaller** - 45% less code (1,260 LOC vs Jison's 2,285)
+- 📦 **Smaller** - 45% less code (1,273 LOC vs Jison's 2,285)
 - 🚀 **Zero dependencies** - completely standalone
 - 🎨 **More flexible** - output s-expressions OR traditional AST nodes
 
@@ -34,195 +33,269 @@ npm install solar-parser
 
 ---
 
-## The S-Expression Advantage
+## Quick Start
 
-### Traditional Parser Generators (Jison, Bison, Yacc)
+### Installation
 
-Force you into verbose AST class definitions:
+```bash
+# With Bun (recommended - fastest):
+bun add -g solar-parser
+
+# With npm:
+npm install -g solar-parser
+
+# Now use the 'solar' command:
+solar grammar.js -o parser.js
+solar --help
+```
+
+### Your First Grammar
 
 ```javascript
-// You write:
+// calculator.js
+export default {
+  grammar: {
+    Expression: [
+      ['NUMBER'],
+      ['Expression + Expression', '["+", 1, 3]'],
+      ['Expression * Expression', '["*", 1, 3]'],
+      ['( Expression )', '2']
+    ]
+  },
+
+  operators: [
+    ['left', '+', '-'],
+    ['left', '*', '/']
+  ]
+};
+```
+
+Generate parser:
+```bash
+solar calculator.js -o parser.js
+```
+
+Input: `2 + 3 * 4`  
+Output: `['+', '2', ['*', '3', '4']]`
+
+---
+
+## The S-Expression Advantage
+
+### Traditional AST (Complex)
+
+```javascript
 class BinaryOp {
   constructor(operator, left, right) {
     this.operator = operator;
     this.left = left;
     this.right = right;
   }
-
+  
   compile(options) {
     // 50+ lines of compilation logic
     // Complex inheritance hierarchies
     // Tight coupling everywhere
   }
 }
-
-// Grammar action:
-Expression '+' Expression  { new BinaryOp('+', $1, $3) }
 ```
 
-**Problems:**
-- Hundreds of node classes to maintain
-- Complex inheritance hierarchies
-- Structure tightly coupled to behavior
-- Hard to extend, hard to debug
+**Problems:** Hundreds of node classes, complex inheritance, hard to extend
 
-### Solar's S-Expression Mode
-
-Clean, simple nested arrays:
+### Solar's S-Expressions (Simple)
 
 ```javascript
 // Grammar action:
-Expression '+' Expression  { ['+', $1, $3] }
+['Expression + Expression', '["+", 1, 3]']
 
 // Output:
 ['+', left, right]
 
-// In your compiler:
-case '+': {
-  const [left, right] = rest;
-  return `(${generate(left)} + ${generate(right)})`;
+// Your compiler (simple pattern matching):
+switch (op) {
+  case '+': return `(${gen(left)} + ${gen(right)})`;
+  case '*': return `(${gen(left)} * ${gen(right)})`;
 }
 ```
 
 **Benefits:**
-- ✅ **Simple pattern matching** - just switch on the first element
-- ✅ **Easy to inspect** - `console.log()` shows everything
-- ✅ **Easy to transform** - tree transformations are trivial
-- ✅ **Easy to extend** - add a case, done
-- ✅ **64% less code** - proven in production (Rip compiler: 9,450 LOC vs CoffeeScript: 17,760 LOC)
+- ✅ Simple pattern matching (switch on first element)
+- ✅ Easy to inspect (`console.log()` shows everything)
+- ✅ Easy to transform (tree transformations are trivial)
+- ✅ **64% less code** (proven: Rip 9,450 LOC vs CoffeeScript 17,760 LOC)
 
 ---
 
-## Performance That Matters
+## Performance
 
 **Solar generates parsers in ~58ms. Jison takes ~12,500ms.**
 
-Why does this matter? **Iteration speed.**
-
-**With Jison (12.5 seconds):**
-- Edit grammar → wait → coffee break → check result
-- ~5-10 iterations per hour
-- Slow feedback discourages experimentation
-
-**With Solar (58ms):**
-- Edit grammar → instant feedback → iterate
-- ~100+ iterations per hour
-- Rapid experimentation enabled
-
 ### Benchmark Results
 
-**Real-world test:** Rip's CoffeeScript-compatible grammar (91 types, 406 production rules, 802 lines)
+**Real-world test:** Rip's CoffeeScript-compatible grammar (91 types, 406 rules, 802 lines)
 
 | Metric | Jison | Solar (Bun) | Solar (Node) | Winner |
 |--------|-------|-------------|--------------|--------|
 | **Generation time** | 12,500ms | 58ms | 180ms | **Solar ~215×** |
 | **Dependencies** | Many | Zero | Zero | **Solar** |
-| **Code size** | 2,285 LOC | 1,260 LOC | 1,260 LOC | **Solar 45%** |
+| **Code size** | 2,285 LOC | 1,273 LOC | 1,273 LOC | **Solar 45%** |
 | **Output** | AST classes | S-expressions | S-expressions | **Solar (simpler)** |
 
-**Performance breakdown** (Solar on Bun, average of 10 runs):
+**Performance breakdown** (Solar on Bun):
 ```
 processGrammar:     ~3ms   (5%)
-buildLRAutomaton:  ~40ms   (69%)
-processLookaheads: ~11ms   (19%)
-buildParseTable:   ~10ms   (17%)
+buildLRAutomaton:  ~40ms  (69%)
+processLookaheads: ~11ms  (19%)
+buildParseTable:   ~10ms  (17%)
 ──────────────────────────
-Total:             ~58ms   (range: 56-61ms)
+Total:             ~58ms
 ```
 
-**Note:** Jison took 12.5 seconds on a comparable grammar. Solar's runtime parser performance is identical to Jison (both generate SLR(1) state machines). The speedup is in *generation time*, enabling rapid iteration.
+**Why speed matters:** 58ms feels instant. Edit grammar → test → iterate. Jison's 12.5 seconds kills your flow.
 
 ---
 
-## Quick Start
-
-### Installation
-
-**With Bun (recommended):**
+## CLI Usage
 
 ```bash
-# As a library
-bun add solar-parser
-
-# As a global CLI tool
-bun add -g solar-parser
-
-# Now you can use the 'solar' command anywhere:
+# Generate parser
 solar grammar.js -o parser.js
+
+# Show grammar information
+solar --info grammar.js
+
+# Show grammar as s-expression
+solar --sexpr grammar.js
+
+# Show version
+solar --version
+
+# Help
 solar --help
 ```
 
-**With Node.js:**
+---
 
-```bash
-# As a library
-npm install solar-parser
+## Grammar Syntax
 
-# As a global CLI tool
-npm install -g solar-parser
-
-# Now you can use the 'solar' command anywhere:
-solar grammar.js -o parser.js
-solar --help
-
-# Or use without installing:
-npx solar-parser grammar.js -o parser.js
-```
-
-**Runtime Selection:**
-
-Solar works with both Bun and Node.js. The runtime is automatically determined by how you install:
-
-- **Bun only installed:** `solar` runs on Bun (~58ms) ⚡
-- **npm only installed:** `solar` runs on Node.js (~180ms) ✅
-- **Both installed:** `solar` uses the package manager that installed it
-
-**Force Bun for best performance** (if you have both):
-
-```bash
-# One-time command:
-bun $(which solar) grammar.js -o parser.js
-
-# Or create an alias for convenience:
-alias solar-bun='bun $(which solar)'
-solar-bun grammar.js -o parser.js  # Always uses Bun
-```
-
-### Basic Usage (S-Expression Mode)
+### Basic Structure
 
 ```javascript
-import { Generator } from 'solar-parser';
-
-// Define your grammar
-const grammar = {
-  mode: 'sexp',  // Enable s-expression output
-
-  // Grammar rules
+// grammar.js
+export default {
+  // S-expression mode is default (no mode field needed!)
+  
   grammar: {
-    Program: [
-      ['Statement', '[1]'],
-      ['Program Statement', '[...1, 2]']
-    ],
-
-    Statement: [
-      ['Expression ;', '1']
-    ],
-
-    Expression: [
-      ['NUMBER', '1'],
-      ['Expression + Expression', '["+", 1, 3]'],
-      ['Expression * Expression', '["*", 1, 3]']
+    RuleName: [
+      ['pattern', 'action'],
+      ['another pattern', 'action', { prec: 'OPERATOR' }]
     ]
   },
-
-  // Operator precedence
+  
   operators: [
     ['left', '+', '-'],
     ['left', '*', '/']
   ]
 };
+```
 
-// Generate parser
+Each rule: `[pattern, action?, options?]`
+
+### Three Action Styles
+
+#### Style 1: Pass-Through (Default)
+
+Omit action or use `1` to return first token:
+
+```javascript
+Expression: [
+  ['Value'],        // Omit action (defaults to 1)
+  ['Operation', 1]  // Explicit 1
+]
+```
+
+**Generated:** `return $$[$0];`
+
+#### Style 2: Simple S-Expression (Most Common)
+
+**Bare numbers** become token references:
+
+```javascript
+// Pattern positions:  1  2          3     4    5
+If: [
+  ['IF Expression Block', '["if", 2, 3]'],
+  ['IF Expression Block ELSE Block', '["if", 2, 3, 5]']
+]
+```
+
+**How it works:**
+- `2` → `$$[$0-3]` (Expression)
+- `3` → `$$[$0-2]` (Block)
+- `5` → `$$[$0]` (Block after ELSE)
+
+**Output:** `["if", condition, thenBlock, elseBlock?]`
+
+**Use this for 90% of your rules!**
+
+#### Style 3: Advanced ($n References)
+
+Use `$n` syntax when you need conditional logic or literal numbers:
+
+```javascript
+Parenthetical: [
+  ['( Body )', '$2.length === 1 ? $2[0] : $2']
+]
+```
+
+**Key:** The `1` in `.length === 1` and `0` in `[0]` are **NOT** replaced because you used `$n`.
+
+### Spread Operator
+
+Build arrays incrementally:
+
+```javascript
+Body: [
+  ['Line', '[1]'],                       // Wrap: [Line]
+  ['Body TERMINATOR Line', '[...1, 3]']  // Spread: [...Body, Line]
+]
+```
+
+### Precedence & Associativity
+
+```javascript
+operators: [
+  ['right', '=', ':'],      // Lowest precedence
+  ['left', '+', '-'],
+  ['left', '*', '/', '%'],
+  ['right', '**'],
+  ['left', '&&'],
+  ['left', '||'],
+  ['nonassoc', '++', '--'], // Highest precedence
+]
+```
+
+Listed from **lowest to highest** precedence.
+
+---
+
+## API Reference
+
+### Programmatic Usage
+
+```javascript
+import { Generator } from 'solar-parser';
+
+const grammar = {
+  grammar: {
+    Expression: [
+      ['NUMBER'],
+      ['Expression + Expression', '["+", 1, 3]']
+    ]
+  },
+  operators: [['left', '+']]
+};
+
+// Generate parser code
 const generator = new Generator(grammar);
 const parserCode = generator.generate();
 
@@ -231,114 +304,46 @@ import fs from 'fs';
 fs.writeFileSync('parser.js', parserCode);
 ```
 
-**Output for `2 + 3 * 4`:**
+### Using Generated Parser
+
 ```javascript
-['+', '2', ['*', '3', '4']]
+import { Parser } from './parser.js';
+
+const parser = new Parser();
+parser.lexer = myLexer;  // Attach your lexer
+
+const result = parser.parse('2 + 3 * 4');
+console.log(result);  // ['+', '2', ['*', '3', '4']]
 ```
 
-### Traditional AST Mode (Jison-Compatible)
+### Lexer Interface
 
-Solar also supports traditional Jison-style grammars:
-
-```javascript
-const grammar = {
-  bnf: {
-    Expression: [
-      ['NUMBER', 'return new NumberNode($1)'],
-      ['Expression + Expression', 'return new BinaryOp("+", $1, $3)']
-    ]
-  },
-  operators: [['left', '+']]
-};
-```
-
----
-
-## Grammar Syntax
-
-### The `o` Helper (Optional but Recommended)
+Solar works with any lexer implementing this interface:
 
 ```javascript
-const o = (pattern, action, options) => {
-  pattern = pattern.trim().replace(/\s{2,}/g, ' ');
-  return [pattern, action ?? 1, options];
-};
-
-// Usage:
-grammar = {
-  Expression: [
-    o('NUMBER'),                           // Pass-through
-    o('Expression + Expression', '["+", 1, 3]'),
-    o('( Expression )', '2'),              // Unwrap parens
-    o('Expression * Expression', '["*", 1, 3]', {prec: '*'})
-  ]
+class MyLexer {
+  setInput(input, yy) {
+    this.input = input;
+    // Initialize lexer state
+  }
+  
+  lex() {
+    // Return token name (string) or EOF (1)
+    return 'NUMBER';
+  }
+  
+  // Required properties:
+  // - yytext: matched text
+  // - yyleng: match length
+  // - yylineno: line number (0-based)
+  // - yylloc: { first_line, last_line, first_column, last_column }
 }
 ```
 
-### S-Expression Action Styles
-
-Solar's sexp mode has three action styles:
-
-#### Style 1: Pass-Through (Default)
-
-When you omit the action (defaults to `1`), returns the first token:
-
-```javascript
-Expression: [
-  o('Value'),      // Returns Value (position 1)
-  o('Operation')   // Returns Operation (position 1)
-]
-```
-
-#### Style 2: Simple S-Expression (Recommended)
-
-**Most common style** - bare numbers become token references:
-
-```javascript
-// Pattern positions:  1    2          3     4    5
-If: [
-  o('IF Expression Block', '["if", 2, 3]'),
-  o('IF Expression Block ELSE Block', '["if", 2, 3, 5]')
-]
-```
-
-**Generated output:**
-```javascript
-["if", condition, thenBlock]
-["if", condition, thenBlock, elseBlock]
-```
-
-**How it works:** Solar automatically converts:
-- `2` → `$$[$0-3]` (Expression)
-- `3` → `$$[$0-2]` (Block)
-- `5` → `$$[$0]` (Block after ELSE)
-
-**Use for:** 90% of your grammar rules!
-
-#### Style 3: Advanced ($n References)
-
-When you need conditional logic or literal numbers:
-
-```javascript
-Parenthetical: [
-  o('( Body )', '$2.length === 1 ? $2[0] : $2')
-]
-```
-
-The `1` in `.length === 1` and `0` in `[0]` are **NOT** replaced because you used `$n` syntax.
-
-**Use for:** Conditional logic, array manipulation, transformations
-
-### Spread Operator
-
-Build arrays incrementally:
-
-```javascript
-Body: [
-  o('Line', '[1]'),                        // Wrap: [Line]
-  o('Body TERMINATOR Line', '[...1, 3]')   // Spread: [...Body, Line]
-]
-```
+**Compatible with:**
+- CoffeeScript's lexer
+- Jison's lexer
+- Your custom lexer
 
 ---
 
@@ -350,26 +355,21 @@ Body: [
 // Variables & Assignment
 ['=', target, value]
 ['+=', target, value]
-['&&=', target, value]
-['??=', target, value]
 
 // Functions
-['def', name, params, body]          // Named function
-['->', params, body]                 // Anonymous (unbound this)
-['=>', params, body]                 // Arrow (bound this)
+['def', name, params, body]
+['->', params, body]         // Arrow function
+['=>', params, body]         // Fat arrow (bound this)
 
-// Calls & Property Access
-[callee, ...args]                    // Function call
-['await', expr]                      // Await
-['.', obj, 'prop']                   // Property: obj.prop
-['?.', obj, 'prop']                  // Optional: obj?.prop
-['[]', arr, index]                   // Index: arr[index]
-['?[]', arr, index]                  // Optional: arr?.[index]
+// Calls & Access
+[callee, ...args]            // Function call
+['.', obj, 'prop']           // Property access
+['[]', arr, index]           // Array index
 
 // Operators
-['+', left, right]                   // Binary
-['!', expr]                          // Unary
-['?:', condition, thenExpr, elseExpr] // Ternary
+['+', left, right]           // Binary
+['!', expr]                  // Unary
+['?:', cond, then, else]     // Ternary
 
 // Control Flow
 ['if', condition, thenBlock, elseBlock?]
@@ -378,41 +378,224 @@ Body: [
 
 // Data Structures
 ['array', ...elements]
-['object', ...pairs]                 // pairs: [key, value]
-['...', expr]                        // Spread
+['object', ...pairs]         // pairs: [key, value]
+['...', expr]                // Spread
 
 // Other
 ['block', ...statements]
 ['return', expr?]
 ```
 
-### Why Arrays?
-
-**Disambiguation is by operand count:**
+### Disambiguation by Arity
 
 ```javascript
-['...', expr]           // Unary spread (1 operand)
-['...', from, to]       // Exclusive range (2 operands)
-['..', from, to]        // Inclusive range (2 operands)
+['...', expr]          // Unary spread (1 operand)
+['...', from, to]      // Exclusive range (2 operands)
+['..', from, to]       // Inclusive range (2 operands)
 ```
 
-Your codegen just checks `rest.length` to determine meaning.
+Your codegen checks operand count to determine meaning.
+
+---
+
+## Grammar Development
+
+### Tips for Writing Grammars
+
+1. **Start simple** - Build incrementally
+2. **Test often** - 58ms makes testing pleasant!
+3. **Use Style 2 actions** - `'["+", 1, 3]'` for most rules
+4. **Document positions** - Add comments for clarity:
+   ```javascript
+   ['IF Expression Block ELSE Block', '["if", 2, 3, 5]']
+   // 1   2          3     4    5            cond then else
+   ```
+
+### Common Patterns
+
+```javascript
+// Assignment
+['Assignable = Expression', '["=", 1, 3]']
+
+// Binary operator
+['Expression + Expression', '["+", 1, 3]']
+
+// Unary operator
+['! Expression', '["!", 2]']
+
+// Function definition
+['FUNCTION Identifier ( ParamList ) Block', '["function", 2, 4, 6]']
+
+// Unwrap parentheses
+['( Expression )', '2']
+
+// Build array from single element
+['Line', '[1]']
+
+// Build array incrementally
+['Lines Line', '[...1, 2]']
+```
+
+### Debugging
+
+```bash
+# View generated code
+cat parser.js | head -50
+
+# Find specific case
+grep -A 2 "case 123:" parser.js
+
+# Check grammar structure
+solar --sexpr grammar.js
+```
+
+---
+
+## Jison Compatibility Mode
+
+Solar also supports traditional Jison grammars:
+
+```javascript
+const grammar = {
+  bnf: {  // Use 'bnf' instead of 'grammar' for Jison mode
+    Expression: [
+      ['NUMBER', 'return new NumberNode($1)'],
+      ['Expression + Expression', 'return new BinaryOp("+", $1, $3)']
+    ]
+  },
+  operators: [['left', '+']]
+};
+```
+
+**Named symbol references** (Jison feature):
+```javascript
+Rule: [
+  ['Var[name] = Expr[value]', 'return assign($name, $value)']
+  // Clearer than: 'return assign($1, $3)'
+]
+```
+
+---
+
+## Installation & Runtime
+
+### Choose Your Runtime
+
+Solar works with Bun, Node.js, and Deno. The shebang is `#!/usr/bin/env node` which all three can execute.
+
+**Install with Bun (recommended):**
+```bash
+bun add -g solar-parser
+solar grammar.js  # Runs on Bun (~58ms) ⚡
+```
+
+**Install with npm:**
+```bash
+npm install -g solar-parser
+solar grammar.js  # Runs on Node.js (~180ms) ✅
+```
+
+**Force Bun if you have both:**
+```bash
+# One-time:
+bun $(which solar) grammar.js -o parser.js
+
+# Or create alias:
+alias solar-bun='bun $(which solar)'
+solar-bun grammar.js  # Always uses Bun
+```
+
+### As a Library
+
+```bash
+bun add solar-parser      # For projects
+npm install solar-parser
+```
+
+```javascript
+import { Generator } from 'solar-parser';
+```
+
+---
+
+## Real-World Example
+
+Complete calculator with s-expression output:
+
+```javascript
+// calculator.js
+export default {
+  grammar: {
+    Program: [
+      ['Expression', '[1]']
+    ],
+    
+    Expression: [
+      ['NUMBER'],
+      ['Expression + Expression', '["+", 1, 3]'],
+      ['Expression - Expression', '["-", 1, 3]'],
+      ['Expression * Expression', '["*", 1, 3]'],
+      ['Expression / Expression', '["/", 1, 3]'],
+      ['( Expression )', '2'],
+      ['- Expression', '["-", 2]', { prec: 'UMINUS' }]
+    ]
+  },
+  
+  operators: [
+    ['left', '+', '-'],
+    ['left', '*', '/'],
+    ['right', 'UMINUS']
+  ]
+};
+```
+
+**Generate and test:**
+```bash
+solar calculator.js -o calc-parser.js
+
+# Show statistics
+solar --info calculator.js
+# Output:
+# • Tokens: 8
+# • Types: 3
+# • Rules: 9
+# • States: 17
+# • Conflicts: 0
+```
+
+**Simple evaluator:**
+```javascript
+function evaluate(sexpr) {
+  if (typeof sexpr === 'string') return parseFloat(sexpr);
+  
+  const [op, ...args] = sexpr;
+  const values = args.map(evaluate);
+  
+  switch (op) {
+    case '+': return values[0] + values[1];
+    case '-': return values[0] - values[1];
+    case '*': return values[0] * values[1];
+    case '/': return values[0] / values[1];
+  }
+}
+
+evaluate(['+', '2', ['*', '3', '4']]);  // → 14
+```
+
+**Notice:** No AST classes, no visitor pattern, no complex traversal. Just pattern matching.
 
 ---
 
 ## Grammar Modes
 
-Solar supports two grammar modes:
-
-### 1. S-Expression Mode (Recommended)
+### S-Expression Mode (Default)
 
 ```javascript
-const grammar = {
-  mode: 'sexp',
+export default {
   grammar: {
     Expression: [
-      o('NUMBER', '1'),
-      o('Expression + Expression', '["+", 1, 3]')
+      ['NUMBER'],
+      ['Expression + Expression', '["+", 1, 3]']
     ]
   }
 };
@@ -420,11 +603,11 @@ const grammar = {
 
 **Output:** Simple nested arrays
 
-### 2. Jison Mode (Compatible)
+### Jison Mode (Compatible)
 
 ```javascript
-const grammar = {
-  bnf: {
+export default {
+  bnf: {  // 'bnf' triggers Jison mode
     Expression: [
       ['NUMBER', 'return new NumberNode($1)'],
       ['Expression + Expression', 'return new BinaryOp("+", $1, $3)']
@@ -437,229 +620,94 @@ const grammar = {
 
 ---
 
-## CLI Usage
+## Architecture
 
-After installing globally (see Installation above), use the `solar` command:
+### How Solar Works
 
-```bash
-# Generate parser from grammar file
-solar grammar.js -o parser.js
-
-# Show statistics
-solar --stats grammar.js
-
-# Combine stats and generation
-solar --stats --output parser.js grammar.js
-
-# Get help
-solar --help
+```
+Grammar Spec → processGrammar → buildLRAutomaton → processLookaheads → buildParseTable → Generate Code
+     ↓              ↓                  ↓                    ↓                  ↓              ↓
+  Parse rules    Build IR        Build states       Compute FIRST/      Create action   Output
+  & operators    structures                         FOLLOW sets         table           parser.js
 ```
 
-**Without global install:**
+### Core Algorithm (SLR(1))
 
-```bash
-# With Bun:
-bun x solar-parser grammar.js -o parser.js
+1. **Process Grammar** (~3ms)
+   - Parse rules and operators
+   - Build symbol tables
+   - Assign precedences
 
-# With npm/npx:
-npx solar-parser grammar.js -o parser.js
+2. **Build LR Automaton** (~40ms)
+   - Compute closures
+   - Build state transitions
+   - Group items by nextSymbol
 
-# Or run directly:
-node node_modules/solar-parser/lib/solar.js grammar.js -o parser.js
-```
+3. **Process Lookaheads** (~11ms)
+   - Compute NULLABLE sets
+   - Compute FIRST sets
+   - Compute FOLLOW sets
+   - Assign item lookaheads
+
+4. **Build Parse Table** (~10ms)
+   - Generate shift/reduce/accept actions
+   - Resolve conflicts with precedence
+   - Compute default actions
+
+**Result:** Efficient SLR(1) parse table ready for code generation
 
 ---
 
-## API Reference
+## Advanced Features
 
-### Generator Class
+### Token Metadata
 
-```javascript
-import { Generator } from 'solar-parser';
-
-const generator = new Generator(grammar, options);
-```
-
-**Options:**
-- `debug: boolean` - Enable debug tracing output
-
-**Methods:**
-- `generate()` - Returns parser code as string
-- `createParser()` - Returns parser instance (for runtime use)
-
-### Parser Class
+Your lexer can attach metadata to tokens, which Solar preserves:
 
 ```javascript
-import { Parser } from './parser.js';
+// String tokens
+token.quote = '"';        // Preserve quote style
+token.double = true;
 
-const parser = new Parser();
-parser.lexer = myLexer;  // Attach your lexer
+// Number tokens  
+token.parsedValue = 42;   // Pre-parsed value
 
-const result = parser.parse(input);
+// All tokens
+token.range = [start, end];  // For source maps
 ```
 
----
+These properties are available in your grammar actions via `$n`.
 
-## Versions Available
+### Named Symbol References
 
-Solar is distributed as **pure JavaScript (ES2022)**:
-
-### **Production Package**
-```bash
-# With Bun (recommended):
-bun add solar-parser
-
-# With npm:
-npm install solar-parser
-```
-
-**What you get:**
-- ✅ Pure JavaScript (ES2022) - no build step
-- ✅ Single self-contained file (~47KB)
-- ✅ Zero dependencies
-- ✅ Works with Bun, Node.js, and Deno
-- ✅ CLI command included
-
-### **Source Code**
-
-Solar is pure JavaScript with zero dependencies:
-
-```bash
-# Clone the repo to see the source:
-git clone https://github.com/shreeve/solar
-cd solar/lib/
-
-# File:
-# - solar.js   (Single JavaScript source file)
-```
-
-**Note:** Solar is a single, self-contained JavaScript file (~47KB, 1,260 lines). No build step required! The original concept was prototyped in Rip, then implemented in TypeScript, and is now maintained as clean JavaScript for maximum simplicity.
-
----
-
-## Real-World Example
-
-Here's a simple calculator grammar:
+For complex patterns:
 
 ```javascript
-const grammar = {
-  mode: 'sexp',
+Rule: [
+  ['Var[name] = Expr[value]', '$name = $value']
+  // Instead of: '$1 = $3'
+]
+```
 
-  grammar: {
-    Program: [
-      o('Expression', '[1]')
-    ],
+Solar strips `[name]` from patterns and maps them in actions.
 
-    Expression: [
-      o('NUMBER', '1'),
-      o('( Expression )', '2'),
-      o('Expression + Expression', '["+", 1, 3]'),
-      o('Expression - Expression', '["-", 1, 3]'),
-      o('Expression * Expression', '["*", 1, 3]'),
-      o('Expression / Expression', '["/", 1, 3]')
-    ]
-  },
+### Error Handling
 
-  operators: [
-    ['left', '+', '-'],
-    ['left', '*', '/']
-  ]
+```javascript
+// Override parseError for custom handling
+parser.yy.parseError = (str, hash) => {
+  console.error(`Syntax error at line ${hash.line}: ${str}`);
+  console.error(`Expected: ${hash.expected.join(' or ')}`);
 };
 ```
 
-**Input:** `2 + 3 * 4`
-
-**S-Expression Output:**
-```javascript
-['+', '2', ['*', '3', '4']]
-```
-
-**Simple Evaluator:**
-```javascript
-function evaluate(sexpr) {
-  if (typeof sexpr === 'string') return parseFloat(sexpr);
-
-  const [op, ...args] = sexpr;
-  const values = args.map(evaluate);
-
-  switch (op) {
-    case '+': return values[0] + values[1];
-    case '-': return values[0] - values[1];
-    case '*': return values[0] * values[1];
-    case '/': return values[0] / values[1];
-  }
-}
-
-evaluate(['+', '2', ['*', '3', '4']]);  // → 14
-```
-
-**Notice:** No AST classes, no visitor pattern, no complex traversal logic. Just pattern matching.
-
----
-
-## Integration with Lexers
-
-Solar is **lexer-agnostic** - use any lexer that implements the expected interface:
+### Debug Mode
 
 ```javascript
-// Minimal lexer interface
-class MyLexer {
-  setInput(input, yy) {
-    this.input = input;
-    // ... initialize
-  }
-
-  lex() {
-    // Return token name or EOF
-    return 'NUMBER';
-  }
-
-  // Properties expected:
-  // - yytext: matched text
-  // - yyleng: match length
-  // - yylineno: line number
-  // - yylloc: location {first_line, first_column, last_line, last_column}
-}
-
-parser.lexer = new MyLexer();
+const generator = new Generator(grammar, { debug: true });
 ```
 
-**Works great with:**
-- CoffeeScript's lexer (used by Rip)
-- Jison's lexer
-- Your custom lexer
-- Any lexer implementing the interface
-
----
-
-## Debugging
-
-### View S-Expression Output
-
-If you're building a Rip-style compiler:
-
-```bash
-echo 'x = 42' | ./bin/rip -s
-# Output: ["=", "x", 42]
-```
-
-### Check Generated Parser
-
-```bash
-# View specific case in generated parser
-grep -A 2 "case 123:" parser.js
-```
-
-### Grammar Development Tips
-
-1. **Start simple** - Build grammar incrementally
-2. **Test each rule** - Generate parser after each change (80ms makes this pleasant!)
-3. **Use style 2 actions** - `'["+", 1, 3]'` for 90% of rules
-4. **Document token positions** - Makes rules self-documenting
-   ```javascript
-   o('IF Expression Block ELSE Block', '["if", 2, 3, 5]')
-   #  1   2          3     4    5            cond then else
-   ```
+Enables trace output during parsing.
 
 ---
 
@@ -672,7 +720,7 @@ grep -A 2 "case 123:" parser.js
 | Generation speed | 12,500ms | 58ms (~215× faster) |
 | Output | AST classes | S-expressions or AST |
 | Dependencies | Many | Zero |
-| Code size | 2,285 LOC | 1,260 LOC |
+| Code size | 2,285 LOC | 1,273 LOC |
 | Self-hosting | No | Yes |
 | Learning curve | Steep | Gentle |
 
@@ -681,17 +729,16 @@ grep -A 2 "case 123:" parser.js
 | Feature | PEG.js | Solar |
 |---------|--------|-------|
 | Algorithm | PEG | SLR(1) |
-| Left recursion | No | Yes |
-| Precedence | Manual | Built-in |
+| Left recursion | No (manual workaround) | Yes (native) |
+| Precedence | Manual rewriting | Built-in |
 | Output | Custom | S-expressions or AST |
-| Speed | Fast | Faster generation |
 
-### vs Hand-Written Parsers
+### vs Hand-Written
 
 | Feature | Hand-Written | Solar |
 |---------|--------------|-------|
 | Development time | Weeks | Hours |
-| Maintenance | Hard | Easy (change grammar) |
+| Maintenance | Hard | Easy (just edit grammar) |
 | Correctness | Error-prone | Proven algorithm |
 | Flexibility | Ultimate | Very high |
 
@@ -701,79 +748,136 @@ grep -A 2 "case 123:" parser.js
 
 ### Simplicity Over Complexity
 
-Solar embraces the philosophy that **simple data structures** (arrays) are better than **complex object hierarchies** (AST classes).
-
-**Three design principles:**
+**Three core principles:**
 
 1. **Plain Data** - S-expressions are just arrays. Easy to inspect, transform, serialize.
 
-2. **Separation of Concerns** - Structure (grammar) is separate from behavior (your codegen). Change one without touching the other.
+2. **Separation of Concerns** - Structure (grammar) separate from behavior (your codegen).
 
-3. **Fast Feedback** - 80ms generation enables rapid experimentation. Your grammar changes should feel instant.
+3. **Fast Feedback** - 58ms generation enables rapid experimentation.
 
 ### When to Use S-Expressions
 
 **Use s-expression mode when:**
 - Building a compiler or transpiler
 - You want clean intermediate representation
-- You'll traverse the tree multiple times (optimizations, analysis, etc.)
+- You'll traverse the tree multiple times
 - You value simplicity and debuggability
 
-**Use traditional AST mode when:**
+**Use Jison mode when:**
 - Integrating with existing Jison grammars
 - You need complex node behaviors
-- You're already invested in AST class hierarchies
+- You're already invested in AST classes
 
 ---
 
-## About Rip
+## Source Code
 
-Solar was originally developed as part of **Rip** - a modern scripting language that's like "CoffeeScript 3". Rip proved the s-expression approach works: it's a **complete, self-hosting compiler in 9,450 LOC** compared to CoffeeScript's 17,760 LOC (50% reduction).
+Solar is **one self-contained JavaScript file:**
 
-Solar is now being extracted as a standalone tool because the approach is valuable for **any** language implementation.
+```bash
+git clone https://github.com/shreeve/solar
+cd solar/lib/
+ls -lh solar.js  # 47KB, 1,273 lines
+```
 
-**Learn more about Rip:** https://github.com/shreeve/rip-lang
+**Architecture:**
+- Classes: Token, Type, Rule, Item, State, Generator
+- Core algorithms: Closure, FIRST/FOLLOW, conflict resolution
+- Code generation: Creates standalone parser modules
+- CLI interface: Argument parsing, file I/O
+
+**No build step required!** Edit `lib/solar.js` directly and test immediately.
 
 ---
 
 ## Contributing
 
-Solar is designed to be clean-room simple:
+### Development Workflow
 
-1. **Repository structure:**
-   ```
-   lib/
-     solar.js        # Source code & entry point (ONE FILE!)
-   docs/
-     calculator.js   # Example grammar
-   ```
+```bash
+# Clone
+git clone https://github.com/shreeve/solar
+cd solar
 
-2. **Development workflow:**
-   ```bash
-   # Clone and setup
-   git clone https://github.com/shreeve/solar
-   cd solar
+# Make changes
+vi lib/solar.js    # Edit directly - no build!
 
-   # Make changes
-   vi lib/solar.js    # Edit directly - no build!
+# Test
+bun lib/solar.js docs/calculator.js -o test.js
 
-   # Test immediately
-   bun lib/solar.js --help
-   bun lib/solar.js docs/calculator.js -o test.js
+# Publish
+# 1. Update version in package.json
+# 2. Update VERSION in lib/solar.js (line 24)
+# 3. Update @version in JSDoc (line 17)
+npm publish
+```
 
-   # To publish:
-   # 1. Update version in package.json
-   # 2. Update VERSION constant in lib/solar.js (line 24)
-   # 3. Update @version in JSDoc (line 16)
-   npm publish
-   ```
+### Philosophy
 
-3. **Philosophy:**
-   - Keep it simple
-   - Zero runtime dependencies
-   - Fast feedback (don't sacrifice generation speed)
-   - S-expressions first
-   - ES2022 modern JavaScript
+- Keep it simple
+- Zero runtime dependencies
+- Fast feedback (don't sacrifice generation speed)
+- S-expressions first
+- Pure JavaScript (ES2022)
+
+---
+
+## Real-World Usage
+
+**Rip Language Compiler** - Production usage of Solar
+
+- **Complexity:** 91 types, 406 production rules
+- **Result:** Complete self-hosting compiler in 9,450 LOC
+- **Comparison:** CoffeeScript (similar language) is 17,760 LOC
+- **Reduction:** 46% smaller codebase using s-expressions
+
+**Learn more:** https://github.com/shreeve/rip-lang
+
+---
+
+## FAQ
+
+**Q: Is Solar production-ready?**  
+A: Yes. Battle-tested in the Rip compiler (864/864 tests passing).
+
+**Q: Can I use my existing Jison grammar?**  
+A: Yes! Use `bnf` instead of `grammar` in your spec.
+
+**Q: What about LR(1) or LALR(1)?**  
+A: Solar is SLR(1). Sufficient for most languages. Need stronger? Use Jison.
+
+**Q: Why not PEG?**  
+A: PEG doesn't handle left recursion naturally. SLR(1) does.
+
+**Q: Can I output JSON/XML/etc instead of s-expressions?**  
+A: Yes! Your actions can return anything. S-expressions are just recommended.
+
+**Q: How do I handle errors?**  
+A: Override `parser.yy.parseError()` for custom error handling.
+
+**Q: Does it work with TypeScript?**  
+A: Solar is pure JavaScript, but you can write grammars in .ts files (they're imported dynamically).
+
+**Q: Why one file instead of modules?**  
+A: Simplicity. One file is easier to understand, debug, and distribute.
+
+---
+
+## Examples
+
+### Calculator (see docs/calculator.js)
+
+Basic arithmetic with precedence and parentheses.
+
+### Your Grammar Here!
+
+Solar shines when building:
+- Programming languages
+- DSLs (Domain Specific Languages)
+- Config file parsers
+- Template languages
+- Query languages
 
 ---
 
@@ -791,40 +895,13 @@ MIT
 - CoffeeScript (lexer integration)
 - Lisp/Scheme (s-expressions)
 
-**Built by:** Developers who believe simplicity scales
+**Built by:** Steve Shreeve
 
-**Performance enabled by:** Clean algorithms + void operators + simple data structures
-
----
-
-## FAQ
-
-**Q: Is Solar production-ready?**
-A: Yes. It's been battle-tested as part of the Rip compiler (864/864 tests passing).
-
-**Q: Can I use my existing Jison grammar?**
-A: Yes! Solar supports Jison-compatible grammars (just use `bnf` instead of `grammar`).
-
-**Q: What about LR(1) or LALR(1)?**
-A: Solar is SLR(1). For most languages, this is sufficient. If you need stronger parsing, use Jison.
-
-**Q: Why not PEG?**
-A: PEG doesn't handle left recursion naturally. Solar/SLR(1) does.
-
-**Q: Do I need to know Rip?**
-A: No! Solar is pure JavaScript (ES2022). The original concept was prototyped in Rip, but the current implementation is standalone JavaScript.
-
-**Q: Can I output JSON/XML/etc instead of s-expressions?**
-A: Yes! Your grammar actions can return anything. S-expressions are just the recommended approach.
-
-**Q: How do I handle errors?**
-A: Solar generates standard LR parsers with error recovery. Override `parseError()` for custom handling.
-
-**Q: Is this used in production?**
-A: Yes - the Rip compiler uses Solar in production, compiling itself and all Rip code.
+**Performance enabled by:** Clean algorithms + modern JavaScript + simple data structures
 
 ---
 
 **Start simple. Build incrementally. Ship elegantly.** ✨
 
 **Try Solar today and rediscover the joy of fast iteration.**
+
