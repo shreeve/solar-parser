@@ -1406,45 +1406,29 @@ Examples:
 
       // Show grammar as s-expression
       if (options.sexpr) {
-        // Build s-expression structure
         const parts: string[] = ['(grammar'];
 
-        if (grammar.mode) {
-          parts.push(`  (mode ${grammar.mode})`);
-        }
+        if (grammar.mode) parts.push(`  (mode ${grammar.mode})`);
 
         if (grammar.grammar) {
           parts.push('  (rules');
           for (const [name, productions] of Object.entries(grammar.grammar)) {
             parts.push(`    (${name}`);
-            for (const prod of productions as any[]) {
-              // Format production as s-expression: (pattern action options?)
-              const pattern = prod[0] || '';
-              const action = prod[1] !== undefined ? prod[1] : 1;
-              const options = prod[2];
-
-              let prodStr = `(${pattern}`;
-              if (action !== undefined) {
-                prodStr += ` ${typeof action === 'string' ? action : JSON.stringify(action)}`;
-              }
-              if (options) {
-                prodStr += ` ${JSON.stringify(options)}`;
-              }
-              prodStr += ')';
-
-              parts.push(`      ${prodStr}`);
+            for (const [pattern, action = 1, opts] of productions as any[]) {
+              const actionStr = typeof action === 'string' ? action : JSON.stringify(action);
+              const optsStr = opts ? ` ${JSON.stringify(opts)}` : '';
+              parts.push(`      (${pattern || ''} ${actionStr}${optsStr})`);
             }
             parts.push(`    )`);
           }
           parts.push('  )');
         }
 
-        if (grammar.operators && grammar.operators.length > 0) {
+        if (grammar.operators?.length) {
           parts.push('  (operators');
-          for (const op of grammar.operators) {
-            const opStr = Array.isArray(op) ? `(${op.join(' ')})` : String(op);
-            parts.push(`    ${opStr}`);
-          }
+          grammar.operators.forEach((op: any) => {
+            parts.push(`    (${Array.isArray(op) ? op.join(' ') : op})`);
+          });
           parts.push('  )');
         }
 
