@@ -222,12 +222,10 @@ class Generator {
     this.indent = '  ';
 
     // Detect grammar mode based on export structure
-    if (grammar.mode === 'sexp') {
-      this.mode = 'sexp';   // S-expression mode with compact syntax
-    } else if (grammar.bnf != null) {
+    if (grammar.bnf != null) {
       this.mode = 'jison';  // Jison grammar with AST nodes (CoffeeScript compatibility)
     } else {
-      throw new Error("Unknown grammar format: expected mode='sexp' or grammar.bnf property");
+      this.mode = 'sexp';   // S-expression mode with compact syntax
     }
 
     // Grammar structures
@@ -1400,8 +1398,6 @@ Examples:
       // Show grammar as s-expression
       if (options.sexpr) {
         const parts: string[] = ['(grammar'];
-
-        if (grammar.mode) parts.push(`  (mode ${grammar.mode})`);
 
         if (grammar.grammar) {
           parts.push('  (rules');
