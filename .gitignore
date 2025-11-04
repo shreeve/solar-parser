@@ -3,11 +3,7 @@ node_modules/
 package-lock.json
 yarn.lock
 
-# Build outputs
-lib/*.js
-lib/*.d.ts
-lib/*.map
-!lib/index.js
+# Build outputs (none - lib/solar.js is source now!)
 *.tsbuildinfo
 
 # Logs

@@ -814,17 +814,18 @@ case '+': {
 
 ### Implementation
 
-**Source:** `src/solar.ts` (TypeScript)
-**Compiled:** `lib/solar.js` (JavaScript ES2022)
-**Size:** 1,394 LOC
+**Source:** `lib/solar.js` (Pure JavaScript ES2022)  
+**Size:** ~1,260 lines, 47KB  
+**Dependencies:** Zero  
 
 **Features:**
-- Zero dependencies
+- Single self-contained file
 - Lexer-agnostic (works with any token stream)
-- S-expression mode + Jison-compatible mode
+- S-expression mode (default) + Jison-compatible mode
 - Automatic precedence handling
 - Intelligent conflict resolution
 - Clean, efficient parse table generation
+- No build step required
 
 ### Generated Parsers
 

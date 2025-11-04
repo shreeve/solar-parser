@@ -26,7 +26,7 @@ npm install solar-parser
 **If you've ever wished Jison was:**
 - ⚡ **~215× faster** at generating parsers
 - 🎯 **Simpler** - arrays instead of AST classes
-- 📦 **Smaller** - 54% less code (1,047 LOC vs Jison's 2,285)
+- 📦 **Smaller** - 45% less code (1,260 LOC vs Jison's 2,285)
 - 🚀 **Zero dependencies** - completely standalone
 - 🎨 **More flexible** - output s-expressions OR traditional AST nodes
 
@@ -117,7 +117,7 @@ Why does this matter? **Iteration speed.**
 |--------|-------|-------------|--------------|--------|
 | **Generation time** | 12,500ms | 58ms | 180ms | **Solar ~215×** |
 | **Dependencies** | Many | Zero | Zero | **Solar** |
-| **Code size** | 2,285 LOC | 1,394 LOC | 1,394 LOC | **Solar 38%** |
+| **Code size** | 2,285 LOC | 1,260 LOC | 1,260 LOC | **Solar 45%** |
 | **Output** | AST classes | S-expressions | S-expressions | **Solar (simpler)** |
 
 **Performance breakdown** (Solar on Bun, average of 10 runs):
@@ -502,9 +502,9 @@ const result = parser.parse(input);
 
 ## Versions Available
 
-Solar is distributed as **compiled JavaScript (ES2022)** with full TypeScript support:
+Solar is distributed as **pure JavaScript (ES2022)**:
 
-### **Production Package** (TypeScript + JavaScript)
+### **Production Package**
 ```bash
 # With Bun (recommended):
 bun add solar-parser
@@ -672,7 +672,7 @@ grep -A 2 "case 123:" parser.js
 | Generation speed | 12,500ms | 58ms (~215× faster) |
 | Output | AST classes | S-expressions or AST |
 | Dependencies | Many | Zero |
-| Code size | 2,285 LOC | 1,394 LOC |
+| Code size | 2,285 LOC | 1,260 LOC |
 | Self-hosting | No | Yes |
 | Learning curve | Steep | Gentle |
 

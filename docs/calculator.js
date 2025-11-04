@@ -15,8 +15,7 @@
 // Example output: ["+", "2", ["*", "3", "4"]]
 
 export default {
-
-  // Grammar rules
+  // Grammar rules (s-expression mode is default!)
   grammar: {
     // Program is one or more expressions
     Program: [

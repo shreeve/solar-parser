@@ -1,11 +1,7 @@
-# Source files (development only)
-src/
-
 # Development files
 test/
 tests/
-*.rip
-tsconfig.json
+scripts/
 *.tsbuildinfo
 .gitignore
 .git/
