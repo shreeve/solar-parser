@@ -39,6 +39,7 @@
     "LICENSE"
   ],
   "scripts": {
+    "solar": "bun lib/solar.js",
     "sync-version": "node scripts/sync-version.cjs",
     "pack": "npm pack --dry-run",
     "test": "echo 'Test suite not yet configured' && exit 1",
