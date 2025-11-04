@@ -17,7 +17,7 @@
  *   solar grammar.js -o parser.js
  *
  * @author Steve Shreeve <steve.shreeve@gmail.com>
- * @version 1.0.5
+ * @version 1.0.8
  * @license MIT
  */
 
@@ -25,7 +25,7 @@ import * as fs from 'fs';
 import * as path from 'path';
 import { fileURLToPath, pathToFileURL } from 'url';
 
-const VERSION = '1.0.0';
+const VERSION = '1.0.8';
 
 // ==============================================================================
 // Type Definitions
@@ -1257,6 +1257,93 @@ export default parser
 // Exports
 // ==============================================================================
 
+// ==============================================================================
+// S-Expression Pretty Printer
+// ==============================================================================
+
+const INLINE_FORMS = new Set([
+  '+', '-', '*', '/', '\\', '#', '**', '_',       // Binary operators
+  '=', '<', '>', '[', ']', ']]', '!', '&', '?',   // Comparison & logical
+  '\'', 'not',                                    // Unary NOT, negated compare
+  'var', 'num', 'str', 'global', 'naked-global',  // Atoms and variables
+  'tag', 'entryref', 'assign', 'pass-by-ref',     // References and assignment
+]);
+
+/**
+ * Determine if an array should be formatted inline (single line)
+ */
+function isInline(arr: any[]): boolean {
+  if (!Array.isArray(arr) || arr.length === 0) return false;
+
+  const head = arr[0]?.valueOf?.() ?? arr[0];
+  if (INLINE_FORMS.has(head)) return true;
+
+  // Small arrays without nesting can be inline
+  return arr.length <= 4 && !arr.some(Array.isArray);
+}
+
+/**
+ * Format a single atom (non-array element)
+ */
+function formatAtom(elem: any): string {
+  if (Array.isArray(elem)) return '(???)';
+  if (typeof elem === 'number') return String(elem);
+  if (elem === null) return 'null';
+  if (elem === '') return '""';
+  return String(elem);
+}
+
+/**
+ * Convert S-expression to formatted string
+ */
+function toSexpr(arr: any, indent = 0): string {
+  if (!Array.isArray(arr)) return formatAtom(arr);
+
+  // Inline format: (op arg1 arg2)
+  if (isInline(arr)) {
+    const parts = arr.map((elem: any) => Array.isArray(elem) ? toSexpr(elem) : formatAtom(elem));
+    return `(${parts.join(' ')})`;
+  }
+
+  const spaces = ' '.repeat(indent);
+  const lines: string[] = [];
+
+  // Format head
+  const head = Array.isArray(arr[0]) ? toSexpr(arr[0]) : formatAtom(arr[0]);
+  lines.push(`${spaces}(${head}`);
+
+  // Format remaining elements
+  for (let i = 1; i < arr.length; i++) {
+    const elem = arr[i];
+    if (Array.isArray(elem)) {
+      const formatted = toSexpr(elem, indent + 2);
+      if (isInline(elem)) {
+        lines[lines.length - 1] += ` ${formatted}`;
+      } else {
+        lines.push(formatted);
+      }
+    } else {
+      lines[lines.length - 1] += ` ${formatAtom(elem)}`;
+    }
+  }
+
+  lines[lines.length - 1] += ')';
+  return lines.join('\n');
+}
+
+/**
+ * Pretty-print S-expression
+ * @param sexp - S-expression array from parser
+ * @returns Formatted string representation
+ */
+export function prettyPrint(sexp: any): string {
+  return toSexpr(sexp, 0);
+}
+
+// ==============================================================================
+// Exports
+// ==============================================================================
+
 export { Generator, Token, Type, Rule, Item, State };
 
 export function Parser(grammar: Grammar, options?: GeneratorOptions): any {
@@ -1287,24 +1374,28 @@ const isRunAsScript = process.argv[1] === scriptPath ||
 
 if (isRunAsScript) {
   (async () => {
-    const showHelp = () => {
-      console.log(`Solar - SLR(1) Parser Generator
-===============================
+    const showVersion = () => {
+      console.log(`
+Solar ${VERSION} - SLR(1) Parser Generator
+`);
+    };
 
-Usage: node solar.js [options] [grammar-file]
+    const showHelp = () => {
+      showVersion();
+      console.log(`Usage: solar [options] <grammar-file>
 
 Options:
   -h, --help              Show this help
-  -s, --stats             Show grammar statistics
-  -g, --generate          Generate parser (default)
+  -v, --version           Show version
+  -i, --info              Show grammar information
+  -s, --sexpr <input>     Parse input and pretty-print s-expression
   -o, --output <file>     Output file (default: parser.js)
-  -v, --verbose           Verbose output
 
 Examples:
-  node solar.js grammar.js
-  node solar.js --stats grammar.js
-  node solar.js -o parser.js grammar.js
-  node solar.js --output parser.js grammar.js
+  solar grammar.js
+  solar --info grammar.js
+  solar -o parser.js grammar.js
+  solar --sexpr "x = 42" grammar.js
 `);
     };
 
@@ -1328,10 +1419,10 @@ Examples:
     // Parse command line
     const options: any = {
       help: false,
-      stats: false,
-      generate: false,
-      output: 'parser.js',
-      verbose: false
+      version: false,
+      info: false,
+      sexpr: null,
+      output: 'parser.js'
     };
     let grammarFile: string | null = null;
 
@@ -1343,21 +1434,21 @@ Examples:
         case '--help':
           options.help = true;
           break;
-        case '-s':
-        case '--stats':
-          options.stats = true;
+        case '-v':
+        case '--version':
+          options.version = true;
           break;
-        case '-g':
-        case '--generate':
-          options.generate = true;
+        case '-i':
+        case '--info':
+          options.info = true;
+          break;
+        case '-s':
+        case '--sexpr':
+          options.sexpr = process.argv[++i + 2];
           break;
         case '-o':
         case '--output':
           options.output = process.argv[++i + 2];
-          break;
-        case '-v':
-        case '--verbose':
-          options.verbose = true;
           break;
         default:
           if (!arg.startsWith('-')) grammarFile = arg;
@@ -1365,9 +1456,19 @@ Examples:
       i++;
     }
 
-    if (options.help || !grammarFile) {
+    if (options.help) {
       showHelp();
       process.exit(0);
+    }
+
+    if (options.version) {
+      showVersion();
+      process.exit(0);
+    }
+
+    if (!grammarFile) {
+      showHelp();
+      process.exit(1);
     }
 
     try {
@@ -1393,18 +1494,30 @@ Examples:
       // Generate parser
       const generator = new Generator(grammar, options);
 
-      if (options.stats) {
+      if (options.info) {
         showStats(generator);
       }
 
-      if (options.generate || !options.stats) {
+      if (options.sexpr) {
+        // Parse input and pretty-print s-expression
+        const parser = generator.createParser();
+        try {
+          const result = parser.parse(options.sexpr);
+          console.log('\nS-Expression Output:');
+          console.log(prettyPrint(result));
+        } catch (error: any) {
+          console.error("Parse error:", error.message);
+          process.exit(1);
+        }
+      }
+
+      if (!options.info && !options.sexpr) {
         const parserCode = generator.generate();
         fs.writeFileSync(options.output, parserCode);
         console.log(`\nParser generated: ${options.output}`);
       }
     } catch (error: any) {
       console.error("Error:", error.message);
-      if (options.verbose) console.error(error.stack);
       process.exit(1);
     }
   })();

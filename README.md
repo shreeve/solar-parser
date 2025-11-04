@@ -520,21 +520,20 @@ npm install solar-parser
 - ✅ Works with Bun, Node.js, and Deno
 - ✅ CLI command included
 
-### **Source Code** (Reference)
+### **Source Code**
 
-The original implementation in **Rip** is available in the repository:
+The TypeScript source code is available in the repository:
 
 ```bash
 # Clone the repo to see the source:
 git clone https://github.com/shreeve/solar
 cd solar/src/
 
-# Files:
-# - solar.ts   (TypeScript source - canonical)
-# - solar.rip  (Rip reference implementation)
+# File:
+# - solar.ts   (TypeScript source)
 ```
 
-**Note:** The TypeScript version is compiled from `src/solar.ts` and is the primary distribution. The Rip version (`src/solar.rip`) serves as the reference implementation that proves the approach works.
+**Note:** Solar is compiled from `src/solar.ts` to produce the distributed JavaScript package. The original concept was prototyped in Rip, but the TypeScript version is now the canonical implementation.
 
 ---
 
@@ -745,7 +744,6 @@ Solar is designed to be clean-room simple:
    ```
    src/
      solar.ts        # TypeScript source (edit this)
-     solar.rip       # Rip reference (for comparison)
    lib/
      solar.js        # Compiled output (generated)
      solar.d.ts      # Type definitions (generated)
